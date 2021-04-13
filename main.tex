@@ -1,0 +1,861 @@
+\documentclass[pra,floatfix,footinbib,reprint,superscriptaddress]{revtex4-1}
+
+\usepackage{graphicx}
+\usepackage{dcolumn}
+\usepackage{times}
+\usepackage{physics}
+%\usepackage{sansmath}
+%\usepackage{amsmath, amssymb, dsfont}
+%\usepackage{bbm}
+\usepackage{bbold}
+\usepackage{amsthm}
+%\usepackage{amsfonts}
+\usepackage{tabularx}
+\usepackage{subfigure}
+\usepackage{tikz}
+\usetikzlibrary{matrix}
+\usepackage[pdftex, colorlinks, allcolors=blue]{hyperref}
+
+\DeclareMathOperator\sinc{sinc}
+\DeclareMathOperator\sgn{sgn}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareSymbolFont{sfletters}{OML}{cmbrm}{m}{it}
+
+\DeclareMathSymbol{\salpha}{\mathord}{sfletters}{"0B}
+\DeclareMathSymbol{\sbeta}{\mathord}{sfletters}{"0C}
+\DeclareMathSymbol{\sgamma}{\mathord}{sfletters}{"0D}
+\DeclareMathSymbol{\sdelta}{\mathord}{sfletters}{"0E}
+\DeclareMathSymbol{\sepsilon}{\mathord}{sfletters}{"0F}
+\DeclareMathSymbol{\szeta}{\mathord}{sfletters}{"10}
+\DeclareMathSymbol{\seta}{\mathord}{sfletters}{"11}
+\DeclareMathSymbol{\stheta}{\mathord}{sfletters}{"12}
+\DeclareMathSymbol{\siota}{\mathord}{sfletters}{"13}
+\DeclareMathSymbol{\skappa}{\mathord}{sfletters}{"14}
+\DeclareMathSymbol{\slambda}{\mathord}{sfletters}{"15}
+\DeclareMathSymbol{\smu}{\mathord}{sfletters}{"16}
+\DeclareMathSymbol{\snu}{\mathord}{sfletters}{"17}
+\DeclareMathSymbol{\sxi}{\mathord}{sfletters}{"18}
+\DeclareMathSymbol{\spi}{\mathord}{sfletters}{"19}
+\DeclareMathSymbol{\srho}{\mathord}{sfletters}{"1A}
+\DeclareMathSymbol{\ssigma}{\mathord}{sfletters}{"1B}
+\DeclareMathSymbol{\stau}{\mathord}{sfletters}{"1C}
+\DeclareMathSymbol{\supsilon}{\mathord}{sfletters}{"1D}
+\DeclareMathSymbol{\sphi}{\mathord}{sfletters}{"1E}
+\DeclareMathSymbol{\schi}{\mathord}{sfletters}{"1F}
+\DeclareMathSymbol{\spsi}{\mathord}{sfletters}{"20}
+\DeclareMathSymbol{\somega}{\mathord}{sfletters}{"21}
+\DeclareMathSymbol{\svarepsilon}{\mathord}{sfletters}{"22}
+\DeclareMathSymbol{\svartheta}{\mathord}{sfletters}{"23}
+\DeclareMathSymbol{\svarpi}{\mathord}{sfletters}{"24}
+\DeclareMathSymbol{\svarrho}{\mathord}{sfletters}{"25}
+\DeclareMathSymbol{\svarsigma}{\mathord}{sfletters}{"26}
+\DeclareMathSymbol{\svarphi}{\mathord}{sfletters}{"27}
+
+\newcommand{\diagmatdown}
+    {\mathbin{\rotatebox[origin=c]{9}{$\diagdown$}}}
+    
+\begin{document}
+
+\title{VCHOS}
+
+\date{\today}
+
+\begin{abstract}
+The Villain continued harmonic oscillator states (VCHOS) method is introduced as a numerical tool for simulating large superconducting circuits. It is essentially a tight-binding treatment in $N$ dimensions, where $N$ is the number of dynamical degrees of freedom of the circuit. Care is taken to account for multiple minima in each unit cell.
+\end{abstract}
+
+\maketitle
+
+\section{Motivation}
+
+The charge basis has allowed for the extraction of spectra of many different superconducting circuits such as the transmon, fluxonium, flux qubit, etc., producing results which show excellent agreement with experiment. However there has been much recent interest in so-called "protected" qubits, circuits that are protected from one or multiple decoherence channels. Most examples of such circuits have many nodes, often 3 or more. Such circuits are difficult to simulate in the charge basis, due to the exponential increase in the size of the Hilbert space. A central issue is that a single charge state by itself often is not a good representation of an eigenstate of the circuit (an obvious exception is the Cooper Pair Box). Therefore, many charge states must be kept for each dynamical degree of freedom, often on the order of 20 states. If one can find a set of states, where each individual state is close to an eigenstate of the system, that would allow for a reduction in the number of states necessary to keep in a truncation scheme. If one is furthermore only interested in the low-energy spectrum, only a few states need be kept, on the order of 3 or 4 states. Using these states for each degree of freedom allows for the simulation of much larger circuits, because while the Hilbert space still grows exponentially, the growth is slower than in the case of the charge basis.
+
+\section{VCHOS}
+\label{sec:harm}
+
+The VCHOS method attempts to provide such a set of states. The states are essentially tight-binding states, with a few generalizations from the pedagogically treated version. The first generalization is obvious, and is that the treatment must be performed in multiple dimensions. In the case of a superconducting loop with $N$ nodes, there are $N-1$ degrees of freedom. The second generalization is more subtle, and is that care must be taken to account for all minima of the potential in the first unit cell. In solid-state language, this corresponds to performing a tight-binding treatment with a multi-atom basis. 
+
+In the tight-binding approximation, one usually expands the full potential into a "local" part and a "non-local" part. The full Hamiltonian of a superconducting circuit involving a single loop of Josephson junctions with arbitrary capacitive coupling is
+\begin{align}
+\label{eq:fullham}
+H=&\sum_{x,y}(\hat{n}_{x}-n_{gx})4{E_C}_{x,y}(\hat{n}-n_{gy}) \\ \nonumber -&\sum_{x}E_{Jx}\cos(\hat{\phi}_{x+1}-\hat{\phi}_{x}-\phi_{\text{ext;}x}).
+\end{align}
+Expansion of every cosine term at the global minimum yields a bilinear form, plus higher-order terms. Because the kinetic part of the Hamiltonian is already in a bilinear form, the "local" Hamiltonian has harmonic oscillator states as its eigenfunctions. These harmonic oscillator states will serve as the variational states necessary for the tight-binding treatment. The local Hamiltonian has the form 
+\begin{equation}
+H_{\text{local}}=\frac{1}{2}\sum_{x,y}\Big(\hat{\mathsf{n}}_{x}8{E_C}_{xy}\hat{\mathsf{n}}_{y}
++\varphi_{0}^2\hat{\sphi}_{x}\Gamma_{xy}\hat{\sphi}_{y} \Big),
+\end{equation}
+where $\Gamma_{xy}=\partial_{\sphi_{x}}\partial_{\sphi_{y}}U/\varphi_{0}^2$ is the effective inverse inductance matrix, $\varphi_{0}=\hbar/(2e)$ is the reduced flux quantum and $\mathsf{n}, \sphi$ are operators in the harmonic Hilbert space. The operators $\sphi$ describe deviations from the global minimum of the potential. We are assuming that the offset charge has been gauged away, with the wavefunctions now quasi-periodic in the offset charge.
+
+To find the normal modes of this Hamiltonian, it is easiest to transform to the associated classical Lagrangian 
+\begin{align}
+\mathcal{L}_{\text{local}}=\frac{1}{2}\left(\frac{\hbar}{2e}\right)^{2}\sum_{x,y}\left(\dot{\sphi}_{x}C_{xy}\dot{\sphi}_{y}-\sphi_{x}\Gamma_{xy}\sphi_{y}\right),
+\end{align}
+where $C=\frac{2}{e^2}(E_{C})^{-1}$.
+We proceed in the usual way, by assuming an oscillatory solution $\vec{\sphi}=\vec{\xi}_{\mu}e^{-i\omega_{\mu}t}$. Plugging this in leads to the generalized eigenvalue problem $\Gamma\vec{\xi}_{\mu}=\omega_{\mu}^2C\vec{\xi}_{\mu}$ \cite{Goldstein}. Having now determined the eigenvectors $\vec{\xi}_{\mu}$ which simultaneously diagonalize $C$ and $\Gamma$ via a congruence transformation, we form the matrix $\Xi$ whose columns are the eigenvectors $\vec{\xi}_{\mu}$. Note that there is a freedom in the normalization of each eigenvector $\vec{\xi}_{\mu}$. Usually the normalization is chosen so that
+\begin{align}
+\vec{\xi}_{\mu}^{\;T} C\vec{\xi}_{\mu} &= 1, \\
+\vec{\xi}_{\mu}^{\;T} \Gamma\vec{\xi}_{\mu} &= \omega_{\mu}^{2}.
+\end{align}
+%\begin{align}
+%\Xi^{T} C\Xi &= \mathbbm{1}, \\
+%\Xi^{T} \Gamma \Xi &= \Omega^{2},
+%\end{align}
+%where $\Omega$ is a diagonal matrix of the normal-mode frequencies. 
+However, we will make use of a more convenient normalization, which will be derived below. For now we set $\vec{\xi}_{\mu}^{\;T} C\vec{\xi}_{\mu} = \lambda_{\mu}$.
+We introduce the normal coordinates $\szeta_{\mu}$ defined by $\vec{\sphi}=\Xi\vec{\szeta}$, leading to the new Lagrangian
+\begin{align}
+\mathcal{L}_{\text{local}}=\frac{1}{2}\left(\frac{\hbar}{2e}\right)^{2}\sum_{\mu}\left(\lambda_{\mu}\dot{\szeta}_{\mu}^2-\lambda_{\mu}\omega_{\mu}^2\szeta_{\mu}^2\right).
+\end{align}
+Transforming back to the Hamiltonian yields immediately
+\begin{align}
+\mathcal{H}_{\text{local}}=\frac{1}{2}\sum_{\mu}\left(\left(\frac{2e}{\hbar}\right)^2\lambda_{\mu}^{-1}\mathsf{n}_{\szeta_{\mu}}^2+\left(\frac{\hbar}{2e}\right)^2\lambda_{\mu}\omega_{\mu}^2\szeta_{\mu}^2 \right),
+\end{align}
+where $\mathsf{n}_{\szeta_{\mu}}= \partial\mathcal{L}_{\text{local}}/\partial\dot{\szeta}_{\mu}$
+We now promote $\szeta_{\mu},\mathsf{n}_{\szeta_{\mu}}$ to operators satisfying the commutation relations $[\hat{\szeta}_{\mu},\hat{\mathsf{n}}_{\szeta_{\nu}}]=i\hbar\delta_{\mu\nu}$. This implies in the usual way that $\hat{\mathsf{n}}_{\szeta_{\mu}}= -i\hbar\partial/\partial\hat{\szeta}_{\mu}$. Plugging this in leads to the Hamiltonian
+\begin{align}
+\mathcal{H}_{\text{local}}=\frac{1}{2}\sum_{\mu}\left(-(2e)^2\lambda_{\mu}^{-1}\frac{\partial^2}{\partial\hat{\szeta}_{\mu}^2}+\left(\frac{\hbar}{2e}\right)^2\lambda_{\mu}\omega_{\mu}^2\hat{\szeta}_{\mu}^2 \right).
+\end{align}
+We see that the natural choice for $\lambda_{\mu}$ to give a harmonic length of 1 is $\lambda_{\mu}=\frac{(2e)^2}{\hbar\omega_{\mu}}$, leading to the identities
+\begin{align}
+\vec{\xi}_{\mu}^{\;T} C\vec{\xi}_{\mu} &= \frac{(2e)^2}{\hbar}\frac{1}{\omega_{\mu}}, \\
+\vec{\xi}_{\mu}^{\;T} \Gamma\vec{\xi}_{\mu} &= \frac{(2e)^2}{\hbar}\omega_{\mu}.
+\end{align}
+We obtain the simplified Hamiltonian
+\begin{align}
+\mathcal{H}_{\text{local}}=\frac{1}{2}\sum_{\mu}\left(-\hbar\omega_{\mu}\frac{\partial^2}{\partial\hat{\szeta}_{\mu}^2}+\hbar\omega_{\mu}\hat{\szeta}_{\mu}^2 \right).
+\end{align}
+We can read off the raising and lowering operators as
+\begin{align}
+\hat{a}_{\mu}=\frac{1}{\sqrt{2}}\left(\frac{\partial}{\partial\hat{\szeta}_{\mu}}+\hat{\szeta}_{\mu} \right), \\ 
+\hat{a}_{\mu}^{\dagger}=\frac{1}{\sqrt{2}}\left(-\frac{\partial}{\partial\hat{\szeta}_{\mu}}+\hat{\szeta}_{\mu} \right),
+\end{align}
+leading immediately to 
+\begin{align}
+\mathcal{H}_{\text{local}}=\sum_{\mu}\hbar\omega_{\mu}\left(\hat{a}_{\mu}^{\dagger}\hat{a}_{\mu}+\frac{1}{2}\right).
+\end{align}
+
+However we would like to keep the analysis in terms of the original node variables, as opposed to the normal-mode variables, for ease of writing down periodic displacements. We will therefore use the transformation above that defines our normal-mode variables, but keeping everything in reference to the node variables. The local Lagrangian becomes
+\begin{align}
+\mathcal{L}_{\text{local}}=\frac{1}{2}\left(\frac{\hbar}{2e}\right)^2\Big(\dot{\vec{\sphi}}^{T}\Xi^{-T}\Xi^{T}C\Xi\Xi^{-1}\dot{\vec{\sphi}} \\ \nonumber 
+-\vec{\sphi}^{\;T}\Xi^{-T}\Xi^{T}\Gamma\Xi\Xi^{-1}\vec{\sphi}\Big)
+\\ \nonumber
+=\frac{\hbar}{2}\left(\dot{\vec{\sphi}}^{T}\Xi^{-T}\Omega^{-1}\Xi^{-1}\dot{\vec{\sphi}}- \vec{\sphi}^{T}\Xi^{-T}\Omega\Xi^{-1}\vec{\sphi}\right),
+\end{align}
+where $\Omega$ is a diagonal matrix of the normal mode frequencies. Defining the conjugate momentum vector $\vec{n}=\partial\mathcal{L}/\partial\dot{\vec{\sphi}}=\hbar\Xi^{-T}\Omega^{-1}\Xi^{-1}\dot{\vec{\sphi}}$ lets us write down the classical Hamiltonian
+\begin{align}
+\mathcal{H}_{\text{local}}=\frac{1}{2\hbar}(\Xi^{T}\vec{n})^{T}\Omega\Xi^{T}\vec{n}+\frac{\hbar}{2}(\Xi^{-1}\vec{\sphi})^{T}\Omega\Xi^{-1}\vec{\sphi}.
+\end{align}
+Again, we promote the classical variables to quantum operators satisfying the usual commutation relations, and introduce raising and lowering operators defined as 
+\begin{align}
+\hat{\vec{a}}^{\:\dagger}=&\frac{1}{\sqrt{2\hbar^2}}\left(-i\hat{\vec{n}}^{T}\Xi+\hbar\hat{\vec{\sphi}}\Xi^{-T} \right) \\ \nonumber
+\hat{\vec{a}}=&\frac{1}{\sqrt{2\hbar^2}}\left(i\Xi^{T}\hat{\vec{n}}+\hbar\Xi^{-1}\hat{\vec{\sphi}} \right).
+\end{align}
+In terms of the raising and lowering operators, the conjugate variables $\hat{\vec{n}}$ and $\hat{\vec{\sphi}}$ are
+\begin{align}
+\label{eq:phiaad}
+\hat{\vec{\sphi}}=&\frac{1}{\sqrt{2}}\Xi(\hat{\vec{a}}+\hat{\vec{a}}^{\dagger}) \\
+\label{eq:naad}
+\hat{\vec{n}}=&\frac{-i\hbar}{\sqrt{2}}\Xi^{-T}(\hat{\vec{a}}-\hat{\vec{a}}^{\dagger}).
+\end{align}
+The Hamiltonian is then given as 
+\begin{align}
+\mathcal{H}_{\text{local}}=\hbar\Omega\hat{\vec{a}}^{\dagger}\hat{\vec{a}}+\frac{\hbar}{2}\Omega.
+\end{align}
+The idea then is to use the eigenfunctions of this Hamiltonian as variational states for finding the eigenenergies of the original Hamiltonian.
+
+\subsection{Example: Transmon/CPB}
+
+
+We demonstrate this procedure in the case of the 1D transmon Hamiltonian. Here, we have
+\begin{align}
+H_{\text{tmon}}=4E_{C}(\hat{n}-n_{g})^2-E_{J}\cos(\hat{\phi}),
+\end{align}
+where $H_{\text{tmon}}$ has eigenfunctions $\psi(\phi)$ satisfying $\psi(\phi+2\pi)=\psi(\phi)$. Gauging away the offset-charge dependence of the Hamiltonian, the wavefunctions become quasi-periodic in the offset charge.
+
+\iffalse
+However we would like to gauge away the offset charge dependence, to put the Hamiltonian into a form familiar from Bloch theory. This will allow for a tight-binding approach. Forming $\bar{H}_{\text{tmon}}=e^{-in_{g}\theta}H_{\text{tmon}}e^{in_{g}\theta}$, we find
+\begin{align}
+\bar{H}_{\text{tmon}}=4E_{C}(\hat{n})^2-E_{J}\cos(\hat{\phi}),
+\end{align}
+with wavefunctions $\bar{\psi}(\phi)$ given by
+\begin{align}
+\bar{\psi}(\phi)=e^{-in_{g}\phi}\psi(\phi).
+\end{align}
+Our wavefunctions are now quasi-periodic, with 
+\begin{align}
+\label{qpbc}
+\bar{\psi}(\phi+2\pi) = e^{-i2\pi n_{g}}\bar{\psi}(\phi).
+\end{align}
+\fi
+Expanding the cosine leads to the local Hamiltonian
+\begin{align}
+\label{eq:hamlocaltransmon}
+H_{\text{tmon,local}}=\frac{1}{2}8E_{C}\hat{\mathsf{n}}^2+\frac{E_{J}}{2}\hat{\sphi}^2.
+\end{align}
+We would now like to proceed according to the prescription of Sec.~\ref{sec:harm}. In this 1D case, the eigenvector $\xi$ is just a number, so we have $\xi=\Xi=\left(\frac{8E_{C}}{E_{J}}\right)^{1/4}$, representing the inverse of the harmonic length.
+\iffalse
+Transforming back to the classical Lagrangian to solve the generalized eigenvalue problem, we have $\Gamma\xi=\omega^2C\xi$ with $\Gamma=E_{J}/\varphi_{0}^2$ and $\xi$ a scalar. This trivially yields $\hbar\omega=\sqrt{8E_{J}E_{C}}$. We find $\xi$ through the normalization condition $C\xi^2=\frac{(2e)^2}{\hbar}\frac{1}{\omega}$, or alternatively $\Gamma\xi^2=\frac{(2e)^2}{\hbar}\omega$. We find $\xi=\left(\frac{8E_{C}}{E_{J}}\right)^{1/4}$. 
+%The usual strategy is to now introduce the normal coordinate $\sphi=\xi\szeta$. However, it will be useful to continue with $\sphi,\dot{\sphi}$ as the coordinates with which we define our Lagrangian. However we make use of the transformation by rewriting the classical local Lagrangian
+\begin{align}
+\mathcal{L}_{\text{tmon,local}}&=\frac{1}{2}\left(\frac{\hbar}{2e}\right)^2\dot{\sphi}\xi^{-1}\xi C\xi\xi^{-1}\dot{\sphi}-\frac{1}{2}\sphi\xi^{-1}\xi E_{J}\xi\xi^{-1}\sphi \\ \nonumber
+&=\frac{1}{2}\frac{\hbar}{\sqrt{8E_{J}E_{C}}}(\xi^{-1}\dot{\sphi})^2-\frac{1}{2}\frac{\sqrt{8E_{J}E_{C}}}{\hbar}(\xi^{-1}\sphi)^2.
+\end{align}
+Constructing the Hamiltonian and promoting the coordinates to operators obeying the standard commutation relation yields immediately
+\begin{align}
+\label{eq:hamomegadiagtransmon}
+H_{\text{tmon,local}} = \frac{1}{2}\frac{\sqrt{8E_{J}E_{C}}}{\hbar}\left(\mathsf{\hat{n}}\xi^2 + \hat{\sphi}^2\xi^{-2}\right).
+\end{align}
+It should be emphasized that the coordinates here in Eq.~\eqref{eq:hamomegadiagtransmon} are the same as the coordinates in Eq.~\eqref{eq:hamlocaltransmon}. Indeed, the Hamiltonians are equivalent. The advantage of writing the Hamiltonian in this way is, as mentioned previously, the ease with which we can write down the raising and lowering operators. They can be essentially read off, with the lowering operator given by
+\begin{align}
+\hat{a}=\frac{1}{\sqrt{2\hbar}}\left(i\hat{\mathsf{n}}\xi+\hat{\sphi}\xi^{-1}\right).
+\end{align}
+writing $\sphi,\mathsf{n}$ in terms of $\hat{a}, \hat{a}^{\dagger}$ yields
+\begin{align}
+\hat{\sphi}&=\sqrt{\frac{\hbar}{2}}\xi(\hat{a}+\hat{a}^{\dagger}) \\ 
+\hat{\mathsf{n}}&=-i\sqrt{\frac{\hbar}{2}}\xi^{-1}(\hat{a}-\hat{a}^{\dagger}).
+\end{align}
+The Hamiltonian then reads 
+\begin{align}
+H_{\text{tmon,local}}=\sqrt{8E_{J}E_{C}}\left(\hat{a}^{\dagger}\hat{a}+\frac{1}{2}\right),
+\end{align}
+\fi 
+This Hamiltonian has eigenfunctions
+\begin{align}
+\bra{\sphi}\ket{s}=\frac{1}{\sqrt{2^ss!\xi\sqrt{\pi}}}H_{s}(\xi^{-1}\sphi)e^{-\xi^{-2}\sphi^2/2},
+\end{align}
+where $H_{s}$ is the Hermite polynomial of degree $s$.
+
+To perform the tight-binding treatment, the local eigenfunctions are periodically displaced to satisfy the quasi-periodic requirement, and linear combinations of multiple local eigenfunctions are allowed. The ansatz has the form
+\begin{align}
+\ket{\psi}=\sum_{s}\sum_{k}b_{s}e^{in_{g}2\pi k}\ket{s;2\pi k},
+\end{align}
+where $\ket{s;2\pi k}$ denotes the $s^{\text{th}}$ eigenstate of the harmonic oscillator, centered at $\sphi=2\pi k$, and the $b_{s}$ are as-yet-undetermined coefficients. 
+
+\subsection{Construction of the Hamiltonian}
+
+For the general case of Eq.~\eqref{eq:fullham}, a multi-dimensional Hamiltonian with multiple minima in each unit cell, the procedure is quite similar. First, we form the Hamiltonian $\bar{H}$ that has the explicit offset charge dependence gauged away: $\bar{H}=e^{-i\vec{n}_{g}\cdot\hat{\vec{\phi}}}He^{i\vec{n}_{g}\cdot\hat{\vec{\phi}}}$. Care must now be taken to account for multiple inequivalent minima. We denote the location of such minima in the first unit cell as $\vec{\phi}^{(p)}$, where $p$ indexes the minima. Now, the VCHOS states which serve as our ansatz for the the eigenstates of the full Hamiltonian are
+\begin{equation}
+\ket{\psi}=\sum_{s_{\mu}}\sum_{\vec{k},p}e^{i\vec{n}_{g}\cdot (\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)})}b_{s_{\mu},p}\ket{s_{\mu};\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}},
+\end{equation}
+where $\vec{\phi}_{\vec{k}}$ denote displacements into different unit cells. $s_{\mu}$ represents the $s^{\text{th}}$ excitation in the $\mu^{\text{th}}$ degree of freedom.
+Using the VCHOS state as an ansatz, we have the eigenvalue equation
+\begin{equation}
+H\ket{\psi}=E\ket{\psi}.
+\end{equation}
+Multiplying on the left by $\bra{s'_{\mu'};\vec{\phi}^{(m)}}e^{-i\vec{n}_{g}\cdot\vec{\phi}^{(m)}}$ yields
+\begin{widetext}
+\begin{align}
+\sum_{s_{\mu}}\sum_{\vec{k},p}b_{s_{\mu},p}e^{i\vec{n}_{g}\cdot \delta\vec{\phi}_{\vec{k}pm}}  \bra{s'_{\mu'};\vec{\phi}^{(m)}}e^{-i\vec{n}_{g}\cdot\hat{\vec{\phi}}}H e^{i\vec{n}_{g}\cdot \hat{\vec{\phi}}}\ket{s_{\mu};\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}} \\ \nonumber 
+= E\sum_{s_{\mu}}\sum_{\vec{k},p}e^{i\vec{n}_{g}\cdot \delta\vec{\phi}_{\vec{k}pm}} b_{s_{\mu},p} \bra{s'_{\mu'};\vec{\phi}^{(m)}}\ket{s_{\mu};\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}},
+\end{align}
+\end{widetext}
+where $\delta\vec{\phi}_{\vec{k}pm} = \vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}-\vec{\phi}^{(m)}$.
+Note that the unitary transformation of the Hamiltonian $e^{-i\vec{n}_{g}\cdot\hat{\vec{\phi}}}H e^{i\vec{n}_{g}}$ eliminates the offset charge dependence in the Hamiltonian. The offset charge remains in the problem, but as a phase factor.
+
+To begin to explicitly write down the above matrix elements, we introduce some definitions and identities. Denoting the undisplaced state $\ket{s_{\mu};0}$ as $\ket{s_{\mu}}$, we have
+\begin{align}
+\ket{s_{\mu};\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}} = e^{-i(\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)})\cdot\hat{\vec{n}}}\ket{s_{\mu}},
+\end{align}
+where the minus sign in the exponential comes from translating $\vec{\sphi}\rightarrow\vec{\sphi}-\vec{\phi}_{\vec{k}}-\vec{\phi}^{(p)}$. Using the transformation we derived using the local Hamiltonian, we rewrite the exponential as
+\begin{align}
+\exp(i\vec{\phi}\cdot\hat{\vec{n}})=\exp(\frac{1}{\sqrt{2}}\phi_{x}\Xi_{x\mu}^{-T}(\hat{a}_{\mu}-\hat{a}_{\mu}^{\dagger})),
+\end{align}
+where Einstein summation has been employed and $\vec{\phi}$ represents an arbitrary vector. Using Baker-Campbell-Hausdorff relations, we find
+\begin{widetext}
+\begin{align}
+\exp(\frac{1}{\sqrt{2}}\phi_{x}\Xi_{x\mu}^{-T}(\hat{a}_{\mu}-\hat{a}_{\mu}^{\dagger})) =
+\exp(\frac{-1}{\sqrt{2}}\phi_{x}\Xi_{x\mu}^{-T}\hat{a}_{\mu}^{\dagger})\exp(\frac{1}{\sqrt{2}}\phi_{x}\Xi_{x\mu}^{-T}\hat{a}_{\mu})
+\exp(\frac{-1}{4}\phi_{x}\Xi_{x\mu}^{-T}\Xi_{\mu y}^{-1}\phi_{y}),
+\end{align}
+where care has been taken to normal order the expression. Normal ordering is beneficial because when a finite truncation of the Hilbert space is used, numerical inaccuracies arise due to the identity $\hat{a}^{\dagger}\ket{s_{max},m}=0$, where $s_{max}$ is the maximum excitation kept. Because the last term is a c-number, we can rewrite this expression as 
+\begin{align}
+\exp(\frac{1}{\sqrt{2}}\phi_{x}\Xi_{x\mu}^{-T}(\hat{a}_{\mu}-\hat{a}_{\mu}^{\dagger})) &= 
+\exp(\frac{-1}{8}\phi_{x}\Xi_{x\mu}^{-T}\Xi_{\mu y}^{-1}\phi_{y})
+\exp(\frac{-1}{\sqrt{2}}\phi_{x}\Xi_{x\mu}^{-T}\hat{a}_{\mu}^{\dagger})
+\exp(\frac{-1}{8}\phi_{x}\Xi_{x\mu}^{-T}\Xi_{\mu y}^{-1}\phi_{y})
+\exp(\frac{1}{\sqrt{2}}\phi_{x}\Xi_{x\mu}^{-T}\hat{a}_{\mu})
+ \\ \nonumber
+&= \hat{V}_{-\vec{\phi}}^{\dagger}\hat{V}_{\vec{\phi}}.
+\end{align}
+Using this notation, the eigenvalue equation becomes
+\begin{align}
+\sum_{s_{\mu}}\sum_{\vec{k},p}b_{s_{\mu},p}e^{i\vec{n}_{g}\cdot \vec{\phi}_{\vec{k}}}  \bra{s'_{\mu'}}\hat{V}_{-\vec{\phi}^{(m)}}^{\dagger}\hat{V}_{\vec{\phi}^{(m)}}
+\left(\hat{n}_{x}4{E_C}_{x,y}\hat{n}_{y} -E_{Jx}\cos(\hat{\phi}_{x+1}-\hat{\phi}_{x}-\phi_{\text{ext;}x})\right)
+\hat{V}_{\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}}^{\dagger}\hat{V}_{-\vec{\phi}_{\vec{k}}-\vec{\phi}^{(p)}}\ket{s_{\mu}} \\ \nonumber 
+= E\sum_{s_{\mu}}\sum_{\vec{k},p}e^{i\vec{n}_{g}\cdot \vec{\phi}_{\vec{k}}} b_{s_{\mu},p} \bra{s'_{\mu'}}\hat{V}_{-\vec{\phi}^{(m)}}^{\dagger}\hat{V}_{\vec{\phi}^{(m)}}\hat{V}_{\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}}^{\dagger}\hat{V}_{-\vec{\phi}_{\vec{k}}-\vec{\phi}^{(p)}}\ket{s_{\mu}},
+\end{align}
+\end{widetext}
+where again Einstein notation has been used in writing down the Hamiltonian. To proceed with the process of normal ordering, we must derive several identities. Commuting $\hat{V}$ operators results in the identity
+\begin{align}
+\hat{V}_{\vec{\phi}}\hat{V}_{-\vec{\theta}}^{\dagger} = \hat{V}_{-\vec{\theta}}^{\dagger}\hat{V}_{\vec{\phi}}
+\exp(-\frac{1}{2}\phi_{x}\Xi_{x\mu}^{-T}\Xi_{\mu y}^{-1}\theta_{y}).
+\end{align}
+Collecting this prefactor in the existing prefactor of each $\hat{V}$ operator yields the identity
+\begin{align}
+\hat{V}_{-\vec{\phi}^{(m)}}^{\dagger}\hat{V}_{\vec{\phi}^{(m)}}\hat{V}_{\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}}^{\dagger}\hat{V}_{-\vec{\phi}_{\vec{k}}-\vec{\phi}^{(p)}} = 
+\hat{V}_{\delta\vec{\phi}_{\vec{k}pm}}^{\dagger}
+\hat{V}_{-\delta\vec{\phi}_{\vec{k}pm}},
+\end{align}
+This simplifies the inner product matrix greatly. We now must focus on the left-hand side of the eigenvalue equation, where we must push the operator $\hat{V}_{\vec{\phi}^{(m)}}$ through to the right and the operator $\hat{V}_{\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}}^{\dagger}$ through to the left. We have the identity
+\begin{align}
+\hat{V}_{\vec{\phi}}\;\hat{n}_{x}=(\hat{n}_{x}+\frac{i}{2}\Xi_{x\mu}^{-T}\Xi_{\mu y}^{-1}\phi_{y})\hat{V}_{\vec{\phi}},
+\end{align}
+which allows for the commuting of the $\hat{V}$ operators past the kinetic term. To move the $\hat{V}$ operators past the potential terms, we use the identity
+\begin{align}
+\hat{V}_{\vec{\theta}}\;e^{i\hat{\phi}_{x}}=e^{i(\hat{\phi}_{x}+\frac{1}{2}\theta_{x})}\hat{V}_{\vec{\theta}}.
+\end{align}
+We arrive at the following form of the eigenvalue equation
+\begin{widetext}
+\begin{align}
+\sum_{s_{\mu}}\sum_{\vec{k},p}b_{s_{\mu},p}e^{i\vec{n}_{g}\cdot \delta\vec{\phi}_{\vec{k}pm}}  \bra{s'_{\mu'}}\hat{V}_{\delta\vec{\phi}_{\vec{k}pm}}^{\dagger}\Bigg(
+\left[\hat{n}_{x}-\frac{i}{2}\Xi_{x\mu}^{-T}\Xi_{\mu z}^{-1}(\delta\vec{\phi}_{\vec{k}pm})_{z}\right]4{E_C}_{x,y}\left[\hat{n}_{y}-\frac{i}{2}\Xi_{y\mu}^{-T}\Xi_{\mu z}^{-1}(\delta\vec{\phi}_{\vec{k}pm})_{z}\right] \\ \nonumber  -E_{Jx}\cos\left(\left[\hat{\phi}_{x+1}+(\bar{\vec{\phi}}_{\vec{k}mp})_{x+1}\right]-\left[\hat{\phi}_{x}+(\bar{\vec{\phi}}_{\vec{k}mp})_{x}\right]-\phi_{\text{ext;}x}\right)\Bigg)\hat{V}_{-\delta\vec{\phi}_{\vec{k}pm}}\ket{s_{\mu}} \\ \nonumber
+= E\sum_{s_{\mu}}\sum_{\vec{k},p}e^{i\vec{n}_{g}\cdot \delta\vec{\phi}_{\vec{k}pm}} b_{s_{\mu},p} \bra{s'_{\mu'}}\hat{V}_{\delta\vec{\phi}_{\vec{k}pm}}^{\dagger}
+\hat{V}_{-\delta\vec{\phi}_{\vec{k}pm}}\ket{s_{\mu}},
+\end{align}
+\end{widetext}
+where $\bar{\vec{\phi}}_{\vec{k}mp} = \frac{1}{2}(\vec{\phi}_{\vec{k}}+\vec{\phi}^{(p)}+\vec{\phi}^{(m)})$. The final piece of the normal-ordering procedure is to use Eqs.~\eqref{eq:phiaad}-\eqref{eq:naad} to replace the original variables with the raising and lowering variables. There will be both potential and kinetic terms that must be normal ordered. 
+For the kinetic part of the Hamiltonian, normal ordering leads to the expression
+\begin{widetext}
+\begin{align}
+\left[\hat{n}_{x}-\frac{i}{2}\Xi_{x\mu}^{-T}\Xi_{\mu z}^{-1}(\delta\vec{\phi}_{\vec{k}pm})_{z}\right]4{E_C}_{x,y}\left[\hat{n}_{y}-\frac{i}{2}\Xi_{y\mu}^{-T}\Xi_{\mu z}^{-1}(\delta\vec{\phi}_{\vec{k}pm})_{z}\right] = 
+&-\frac{1}{2}4\widetilde{E_{C}}_{\mu, \nu}\left(\hat{a}_{\mu}\hat{a}_{\nu}+\hat{a}_{\mu}^{\dagger}\hat{a}_{\nu}^{\dagger}-\hat{a}_{\mu}^{\dagger}\hat{a}_{\nu}-\hat{a}_{\nu}^{\dagger}\hat{a}_{\mu}-\delta_{\mu,\nu}\right) \\ \nonumber 
+&-\frac{1}{2\sqrt{2}}\left(\hat{a}_{\mu}-\hat{a}_{\mu}^{\dagger}\right)4\widetilde{E_{C}}_{\mu, \nu}\Xi_{\nu, z}^{-1}(\delta\vec{\phi}_{\vec{k}pm})_{z} 
+\\ \nonumber
+&-\frac{1}{2\sqrt{2}}(\delta\vec{\phi}_{\vec{k}pm})_{z}\Xi_{z, \mu}^{-T}4\widetilde{E_{C}}_{\mu,\nu}\left(\hat{a}_{\nu}-\hat{a}_{\nu}^{\dagger}\right) \\ \nonumber
+&-\frac{1}{4}(\delta\vec{\phi}_{\vec{k}pm})_{z}\Xi_{z,\mu}^{-T}4\widetilde{E_{C}}_{\mu,\nu}\Xi_{\nu ,w}^{-1}(\delta\vec{\phi}_{\vec{k}pm})_{w}\mathbb{1},
+\end{align}
+\end{widetext}
+where $4\widetilde{E_{C}}_{\mu,\nu}=\Xi_{\mu, x}^{-1}4{E_{C}}_{x,y}\Xi_{y, \nu}^{-T}$ and $\mathbb{1}$ is the identity operator.
+
+Similarly, for the potential term we find
+\begin{widetext}
+\begin{align}
+-E_{Jx}\cos\left(\left[\hat{\phi}_{x+1}-(\bar{\vec{\phi}}_{\vec{k}mp})_{x+1}\right]-\left[\hat{\phi}_{x}-(\bar{\vec{\phi}}_{\vec{k}mp})_{x}\right]-\phi_{\text{ext;}x}\right)=-\frac{E_{Jx}}{2}\Bigg(\exp(\frac{i}{\sqrt{2}}\Xi_{x+1,\mu}\hat{a}_{\mu}^{\dagger})\exp(\frac{i}{\sqrt{2}}\Xi_{x+1,\mu}\hat{a}_{\mu}) \\ \nonumber 
+\times \exp(-\frac{1}{4}\Xi_{x+1, \mu}\Xi_{\mu, x+1}^{T}
+-i(\bar{\vec{\phi}}_{\vec{k}mp})_{x+1})
+\exp(\frac{-i}{\sqrt{2}}\Xi_{x,\mu}\hat{a}_{\mu}^{\dagger})\exp(\frac{-i}{\sqrt{2}}\Xi_{x,\mu}\hat{a}_{\mu}) \\ \nonumber 
+\times\exp(-\frac{1}{4}\Xi_{x, \mu}\Xi_{\mu, x}^{T}
++i(\bar{\vec{\phi}}_{\vec{k}mp})_{x})
+\exp(-i\phi_{\text{ext};x}) + h.c.
+\Bigg) \\ \nonumber 
+=-\frac{E_{Jx}}{2}\Bigg(\exp(\frac{i}{\sqrt{2}}\Xi_{x+1,\mu}\hat{a}_{\mu}^{\dagger})\exp(\frac{-i}{\sqrt{2}}\Xi_{x,\mu}\hat{a}_{\mu}^{\dagger})\exp(\frac{i}{\sqrt{2}}\Xi_{x+1,\mu}\hat{a}_{\mu})\exp(\frac{-i}{\sqrt{2}}\Xi_{x,\mu}\hat{a}_{\mu})\exp(\frac{1}{2}\Xi_{x+1,\mu}\Xi_{\mu,x}^{T}) \\ \nonumber 
+\exp(-\frac{1}{4}\Xi_{x+1, \mu}\Xi_{\mu, x+1}^{T}
+-i(\bar{\vec{\phi}}_{\vec{k}mp})_{x+1})\exp(-\frac{1}{4}\Xi_{x, \mu}\Xi_{\mu, x}^{T}
++i(\bar{\vec{\phi}}_{\vec{k}mp})_{x})\exp(-i\phi_{\text{ext};x}) + h.c.
+\Bigg)
+\end{align}
+\end{widetext}
+Solving the generalized eigenvalue problem will then allow for the extraction of the coefficients $b_{s_{\mu},p}$.
+
+\section{Squeezing and Disentangling}
+
+The generalized tight-binding method developed here involves displacing states into numerous inequivalent minima. It is desirable for these harmonic states to have harmonic lengths consistent with the local curvature. This is the motivation for introducing squeezing operators that will modify the harmonic states defined using the global minimum for each local minimum. We will proceed by following Ref.~\cite{qin2001}. The problem is the following. We have defined the matrix $\Xi$ to diagonalize the harmonic Hamiltonian at the global minimum, however there is no reason to expect that $\Xi$ will diagonalize the harmonic Hamiltonian defined at another, inequivalent minimum. Expanding around this (not-global) minimum, but using the operators defined by Eqs.~\eqref{eq:phiaad}-\eqref{eq:naad}, we find for the local Hamiltonian
+\begin{align}
+\mathcal{H}_{\text{local}}'&=\frac{1}{2}\frac{-i}{\sqrt{2}}\Xi_{x, \mu}^{-T}(\hat{a}_{\mu}-\hat{a}_{\mu}^{\dagger})4(E_{C})_{x, y}\frac{-i}{\sqrt{2}}\Xi_{y, \nu}^{-T}(\hat{a}_{\nu}-\hat{a}_{\nu}^{\dagger}) \\ \nonumber
+&+\frac{\varphi_{0}^2}{2}\frac{1}{\sqrt{2}}\Xi_{x, \mu}(\hat{a}_{\mu}+\hat{a}_{\mu})\Gamma_{x, y}'\frac{1}{\sqrt{2}}\Xi_{y, \nu}(\hat{a}_{\nu}+\hat{a}_{\nu}),
+\end{align}
+where the prime indicates that the expansion is around a different minimum than the global minimum. Of course, the kinetic energy matrix is unchanged. Simplifying, we find
+\begin{align}
+\mathcal{H}_{\text{local}}'=&\frac{-1}{4}\left(\hat{a}_{\mu}^2+(\hat{a}_{\mu}^{\dagger})^2
+-\hat{a}_{\mu}\hat{a}_{\mu}^{\dagger}-\hat{a}_{\mu}^{\dagger}\hat{a}_{\mu} \right)\Omega_{\mu} \\ \nonumber
++&\frac{1}{4}\varphi_{0}^2\left(\hat{a}_{\mu}\hat{a}_{\nu}+\hat{a}_{\mu}^{\dagger}\hat{a}_{\nu}^{\dagger}+\hat{a}_{\mu}\hat{a}_{\nu}^{\dagger}+\hat{a}_{\mu}^{\dagger}\hat{a}_{\nu} \right)\widetilde{\Gamma}_{\mu, \nu}',
+\end{align}
+where $\widetilde{\Gamma}'=\Xi^{T}\Gamma'\Xi$ and we have made use of the fact that the kinetic energy matrix is still diagonalized by $\Xi$. To diagonalize this Hamiltonian, we follow Ref.~\cite{qin2001} and borrow their notation. We write the Hamiltonian as
+\begin{align}
+\label{eq:offdiagHlocal}
+\mathcal{H}_{\text{local}}'=
+\left(\begin{matrix}(a^{\dagger})^{T} & (a)^{T}\end{matrix} \right)
+\left(\begin{matrix}
+\zeta & \eta \\
+\eta & \zeta
+\end{matrix}\right)
+\left(\begin{matrix}a \\ a^{\dagger} \end{matrix} \right),
+\end{align}
+where $a$ is the column vector $(\hat{a}_1, \hat{a}_2,\cdots,\hat{a}_N)^{T}$ and $\eta, \zeta$ are $N\times N$ matrices given by
+\begin{align}
+\eta =& \frac{1}{4}\left(\varphi_{0}^2\widetilde{\Gamma}'-\Omega\right), \\
+\zeta =& \frac{1}{4}\left(\varphi_{0}^2\widetilde{\Gamma}'+\Omega\right).
+\end{align}
+We desire new operators $c, c^{\dagger}$ that diagonalize $\mathcal{H}_{\text{local}}'$, i.e.,
+\begin{align}
+\mathcal{H}_{\text{local}}'=
+\left(\begin{matrix}(c^{\dagger})^{T} & (c)^{T}\end{matrix} \right)
+\left(\begin{matrix}
+\Omega' & 0 \\
+0 & \Omega'
+\end{matrix}\right)
+\left(\begin{matrix}c \\ c^{\dagger} \end{matrix} \right),
+\end{align}
+where $\Omega'$ is a diagonal matrix of the mode frequencies in the new minimum. These new operators can be constructed using a Bogoliubov transformation \cite{qin2001, Javanainen}
+\begin{align}
+\left(\begin{matrix}c \\ c^{\dagger} \end{matrix} \right)
+=\left(\begin{matrix}u & v \\ v & u \end{matrix} \right)
+\left(\begin{matrix}a \\ a^{\dagger} \end{matrix}\right),
+\end{align}
+where as noted in Ref.~\cite{Javanainen}, $u$ and $v$ can be taken to be real. We find the constraints $u^{T}u-v^{T}v=uu^{T}-vv^{T}=\mathbb{1}$ and $uv^{T}-vu^{T}=u^{T}v-v^{T}u=\mathbb{0}$ by enforcing the commutation relations $[\hat{a}_{\mu}, \hat{a}_{\nu}^{\dagger}]=[\hat{c}_{\mu}, \hat{c}_{\nu}^{\dagger}]=\delta_{\mu, \nu}$ and $[\hat{a}_{\mu}, \hat{a}_{\nu}]=[\hat{c}_{\mu}, \hat{c}_{\nu}]=[\hat{a}_{\mu}^{\dagger}, \hat{a}_{\nu}^{\dagger}]=[\hat{c}_{\mu}^{\dagger}, \hat{c}_{\nu}^{\dagger}]=0$. These constraints can be written in compact form as $M^{T}KM=MKM^{T}=K$, where
+\begin{align}
+M=\left(\begin{matrix}u & v \\ v & u \end{matrix} \right)
+\text{ and }
+K=\left(\begin{matrix}\mathbb{1} & 0 \\ 0 & -\mathbb{1} \end{matrix} \right).
+\end{align}
+
+\begin{table*}
+\begin{tabular}{|l|l|l|l|l|l||l|l|l|l|l|}
+\hline
+  \multicolumn{1}{|l|}{} & 
+  \multicolumn{5}{|c||}{$E_{0} = 45.2102$} & 
+  \multicolumn{5}{|c|}{$E_{1} = 47.1811$} \\
+  \hline
+$g_{\text{max}}$ & A & B & C & D & E & A & B & C & D & E \\
+\hline
+0 & 47.5433 & 47.5433 & 45.5424 & 45.5423 & 45.5424 & 57.6421 & 53.6789 & 53.5346 & 55.5871 & 53.6804 \\
+
+1 & 47.5433 & 47.5433 & 45.5424 & 45.5423 & 45.5424 & 49.8609 & 49.8609 & 47.5578 & 47.5567 & 47.5577  \\
+
+2 & 46.1229 & 46.1228 & 45.5423 & 45.5409 & 45.5422 & 49.8609 & 49.8609 & 47.5578 & 47.5565 & 47.5577 \\
+
+3 & 46.1229 & 46.1228 & 45.5423 & & 45.5422 & 48.2646 & 48.2644 & 47.5367 & & 47.5343 \\
+
+4 & 45.3524 & 45.3522 & 45.2142 & & 45.2141 & 48.2646 & 48.2644 & 47.5366 & & 47.5340 \\
+
+5 & 45.3524 & 45.3522 & 45.2142 & & & 47.3958 & 47.3933 & 47.1861 & & \\
+
+6 & 45.2278 & 45.2273 & 45.2108 & & & 47.3958 & 47.3932 & 47.1860 & & \\
+\hline
+\end{tabular}
+\caption{\label{table:CM_N3_evals}Eigenvalues of the $N=3$ current mirror circuit in GHz computed with multiple tight binding schemes labeled A, B, C, D, E as discussed in the main text. We examine here convergence to the ground state and first excited state energies, $E_{0}$ and $E_{1}$. The exact results obtained using charge-basis diagonalization are given at the top of the table. We use current-mirror circuit parameters $E_{C_{B}}=0.2$ GHz, $E_{C_{J}}=35$ GHz, $E_{C_{g}}=45$ GHz, $E_{J}=10$ GHz.}
+\end{table*}
+
+\begin{widetext}
+\begin{align}
+\mathcal{S}_{m}^{\dagger}\exp(\vec{w}{\vec{a}^{\dagger}})\exp(\vec{z}\vec{a})\mathcal{S}_{m'} = &\frac{\exp(-\frac{1}{2}\left(\vec{z}\rho'\vec{z}+\frac{1}{2}(\vec{w}-\vec{z}\rho')(\delta\rho+\delta\rho^{t})(\vec{w}-\rho'\vec{z})+\Tr{\sigma^{\dagger}}+\Tr{\sigma'}\right))}{\sqrt{\det(\mathbb{1}-\rho\rho')}}
+\\ \nonumber 
+\times  
+&\exp(-\frac{1}{2}(\vec{a}^{\dagger})^{t}\left[(e^{-\sigma})^{\dagger}\delta\rho'(e^{-\sigma})^{*}-\tau\right]\vec{a}^{\dagger})\exp((\vec{w}-\vec{z}\rho')(e^{\overline{\delta\rho}})^{t}(e^{-\sigma})^{*}\vec{a}^{\dagger})
+\\ \nonumber 
+\times 
+&:\exp((\vec{a}^{\dagger})^{t}(e^{-\sigma^{\dagger}}e^{\overline{\delta\rho}}e^{-\sigma'}-\mathbb{1})\vec{a}):
+\\ \nonumber 
+\times
+&\exp((\vec{z}-\frac{1}{2}(\vec{w}-\vec{z}\rho')(\delta\rho+\delta\rho^{t}))e^{-\sigma'}\vec{a})\exp(\frac{1}{2}(\vec{a})^{t}\left[\tau'-(e^{-\sigma'})^{t}\delta\rho e^{-\sigma'}\right] \vec{a}),
+\end{align},
+\end{widetext}
+
+\begin{align}
+\label{eq:URadag}
+\exp(-(\vec{a})^{t}x \vec{a})\vec{a}^{\dagger}\exp((\vec{a})^{t}x \vec{a})=&(\vec{a}^{\dagger}-\vec{a}(x+x^{t})), \\
+\label{eq:URa}
+\exp(-(\vec{a}^{\dagger})^{t}x \vec{a}^{\dagger})\vec{a}\exp((\vec{a}^{\dagger})^{t}x \vec{a}^{\dagger})=&(\vec{a}+\vec{a}^{\dagger}(x+x^{t})), \\
+\label{eq:UTa}
+\exp(-(\vec{a}^{\dagger})^{t}x\vec{a})\vec{a}\exp((\vec{a}^{\dagger})^{t}x\vec{a})=&e^{x}\vec{a}, \\ 
+\label{eq:UTadag}
+\exp(-(\vec{a}^{\dagger})^{t}x\vec{a})\vec{a}^{\dagger}\exp((\vec{a}^{\dagger})^{t}x\vec{a})=&(e^{-x})^{t}\vec{a}^{\dagger},
+\end{align}
+
+\begin{table*}
+\begin{tabular}{|l|l|l|l|l|}
+ A       & B       & C       & D       & E       \\
+ \hline 
+ 132.7436 & 115.7638 & 124.5159 & 113.1388 & 124.0379 \\
+ 89.7426 & 88.3023 & 84.4882 & 85.4895 & 84.4869 \\
+ 87.5532 & 84.8791 & 84.2619 & 84.3571 & 84.2652 \\
+85.5298 & 84.8300 & 84.1583 &         & 84.1619 \\
+84.3555 &         &         &         & 
+\end{tabular}
+\caption{$N=5, E_{3}$}
+\end{table*}
+
+\section{Tight Binding Applied to Circuits with Extended Potentials}
+\label{sec:zeropi}
+
+We have just demonstrated that the tight-binding method can accurately simulate a superconducting circuit with a purely periodic potential, in both charge-sensitive and flux-sensitive parameter regimes. However, this method is not limited to the special case of entirely periodic potentials, and can be applied to circuits that include inductors. As an example we consider the symmetric BKP $0-\pi$ circuit \cite{Brooks2013} described by the Hamiltonian \cite{Dempster, Groszkowski2018, DiPaolo2018}
+\begin{align}
+\label{eq:zeropihamiltonian}
+\mathcal{H}_{0-\pi}=&4E_{C_{\theta}}(n_{\theta}-n_{g}^{\theta})^2 + 4E_{C_{\phi}}n_{\phi}^2 \\ \nonumber
+&-2E_{J}\cos(\theta)\cos(\phi-\frac{\varphi_{\text{ext}}}{2})+E_{L}\phi^2.
+\end{align}
+The $\theta$ variable is periodic, and has conjugate momentum $n_{\theta}$, while the $\phi$ variable is extended, with conjugate momentum $n_{\phi}$. $E_{C_{i}}$ is the charging energy associated with variable $i=\{\theta, \phi\}$, $n_{g}^{\theta}$ is the offset charge of the $\theta$ degree of freedom, $\varphi_{\text{ext}}$ is the external flux threading the circuit loop, $E_{J}$ is the Josephson energy of each junction and $E_{L}$ is the inductive energy. We choose parameters to match those of parameter set 1 from Ref.~\cite{Groszkowski2018} placing the circuit firmly in protected parameter regime \cite{Dempster, Groszkowski2018}.
+
+As before in the case of the flux qubit, we study how well the tight-binding method converges to the true low-energy spectrum of the $0-\pi$ circuit. We plot in Fig.~\ref{fig:zero_pi_convergence} the average relative deviation of the low-energy spectrum of $H_{0-\pi}$ from the true spectrum as a function of $n_{H}$, as predicted by symmetric tight binding, symmetric tight binding with HLO, and approximate diagonalization. Here, approximate diagonalization refers to using the charge basis for $\theta$ and real space discretization for $\phi$. Varying $n_{H}$ for approximate diagonalization of $H_{0-\pi}$ is not as simple as in the case of the flux qubit, where we simply varied $n_{\text{cut}}$ for both variables simultaneously. Here, multiple combinations of $n_{\text{cut}}$ for $\theta$ and number of discretization points $n_{\text{disc.}}$ for $\phi$ can yield $n_{H}$ values in a given range. To ensure that we select a nearly optimal slice through the two-dimensional parameter space of $(n_{\text{cut}}, n_{\text{disc.}})$, we first specify a set of desired $n_{H}$ values $\{n_{Hi}\}$, and a set of associated allowed ranges $\{\delta n_{Hi}\}$. We then find all combinations $(n_{\text{cut}}, n_{\text{disc.}})$ that yield $n_{H}$ in the given range $n_{Hi}-\delta n_{Hi}< n_{H} <n_{Hi}+\delta n_{Hi}$ and record only the optimal pair $(n_{\text{cut, opt.}}, n_{\text{disc., opt.}})$ that yields the smallest average relative deviation from the four lowest energy eigenvalues. The result is shown in Fig.~\ref{fig:zero_pi_convergence}.
+
+We observe that all three methods eventually obtain average relative deviations of $\lesssim 1e-4$ for large $n_{H}$, with approximate diagonalization achieving the best results in that limit. On the other hand, in the limit of small $n_{H}$, we observe that optimizing our ansatz states with HLO provides an appreciable benefit, yielding an average relative deviation of nearly $1e-2$ for $g_{\text{max}}=0$. Note that the minima are all sufficiently similar for the parameters considered here that general tight binding is not necessary.
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\columnwidth]{convergence_ZP.pdf}
+    \caption{Performance of the tight-binding method applied to the $0-\pi$ qubit as measured by relative deviation between spectra. Tight binding (green), tight binding with HLO (blue), and approximate diagonalization (purple) relative deviations are plotted as a function of $n_{H}$. The plot shows the average relative deviation of the spectrum from the four lowest energy eigenvalues (filled circles), while the colored shaded region indicates minimum and maximum relative deviations. Symmetric tight binding with HLO outperforms approximate diagonalization for small values of $n_{H}$, as indicated by the grey shaded region. The "cliffs" that are observable for the minimum and average relative deviations of symmetric tight binding with HLO at $n_{H}\approx10^5$ are due to the addition of basis states that considerably improve the ground- and first-excited-state energy estimates and second- and third-excited state energy estimates, respectively. The inset shows a schematic of the $0-\pi$ circuit, without the capacitances to ground. We choose circuit parameters to match those of parameter set 1 of Ref.~\cite{Groszkowski2018}, $E_{C_{\theta}}=0.01$ GHz, $E_{C_{\phi}}=10.0$ GHz, $E_{J}=10.0$ GHz, $E_{L}=0.008$ GHz, along with $\varphi_{\text{ext}}=0.8$ and $n_{g}^{\theta}=0.2$.}
+    \label{fig:zero_pi_convergence}
+\end{figure}
+
+We have checked and observed that for the parameter regime considered here, the localization ratios $r_{m,m'}$ are large compared with unity.  Nevertheless, the lowest-energy eigenstates spread over multiple minima of the potential, see Fig.~\ref{fig:zero_pi_wavefunctions}. We find that forming a linear combination of harmonic-oscillator states localized in each local minimum, exactly the tight-binding procedure, yields an excellent approximation to the true eigenspectrum for the lowest-energy states. There is no visible difference between the exact wavefunctions and those obtained using the symmetric-tight-binding method for the parameters considered here.
+\begin{figure}
+    \centering
+    \includegraphics[width=1.0\columnwidth]{ZP_wavefunc_both.pdf}
+    \caption{Amplitude of the four lowest-energy eigenfunctions of $\mathcal{H}_{0-\pi}$ obtained using (a) symmetric tight binding and (b) approximate diagonalization. The eigenfunctions are labeled according to their respective eigenenergies, where $\ket{0}$ corresponds to the ground state and $\ket{3}$ to the third-excited state. Comparing between the two methods, the eigenfunctions are all nearly identical. We choose the same $0-\pi$ circuit parameters as in Fig.~\ref{fig:zero_pi_convergence}.}
+    \label{fig:zero_pi_wavefunctions}
+\end{figure}
+
+\begin{table*}
+\begin{tabular}{l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|}
+& & & $E_0$ & & & & & & $E_1$ & & & & & & $E_{13}$ & & \\
+\hline 
+$g_{\text{max}}$ & A & B & C & D & E & & A & B & C & D & E & & A & B & C & D & E \\
+
+0 & 47.5433 & 47.5433 & 45.5424 & 45.5423 & 45.5424 & & 57.6421 & 53.6789 & 53.5346 & 55.5871 & 53.6804 & & & & & & \\
+
+1 & 47.5433 & 47.5433 & 45.5424 & 45.5423 & 45.5424 &  & 49.8609 & 49.8609 & 47.5578 & 47.5567 & 47.5577 & & 87.8894 & 87.8894 & 85.6722 & 85.6719 & 85.6719 \\
+
+2 & 46.1229 & 46.1228 & 45.5423 & 45.5409 & 45.5422 &  & 49.8609 & 49.8609 & 47.5578 & 47.5565 & 47.5577 &  & 61.2702 & 56.5447 & 56.3654 & 56.1677 & 56.3531 \\
+
+3 & 46.1229 & 46.1228 & 45.5423 & & 45.5422 &  & 48.2646 & 48.2644 & 47.5367 & & 47.5343 & & 54.5417 & 54.4921 & 53.0890 & & 53.0048 \\
+
+4 & 45.3524 & 45.3522 & 45.2142 & & 45.2141 & & 48.2646 & 48.2644 & 47.5366 & & 47.5340 & & 54.5417 & 54.4619 & 52.8845 & & 52.7100 \\
+
+5 & 45.3524 & 45.3522 & 45.2142 & & & & 47.3958 & 47.3933 & 47.1861 & & & & 53.1575 & 52.9285 & 52.8444 & & \\
+
+6 & 45.2278 & 45.2273 & 45.2108 & & & & 47.3958 & 47.3932 & 47.1860 & & & & 53.004 & 52.8471 & 52.6052 & & \\
+
+Exact & 45.2102 & & & & & & 47.1811 & & & & & & 52.3356 & & & &        
+\end{tabular}
+\caption{\label{table:CM_N3_evals}Eigenvalues of the $N=3$ current mirror circuit with parameters given in Tab.~\ref{table:parameters} computed with multiple schemes for optimizing the wavefunctions. We examine here the ground state $E_{0}$, the first excited state $E_{1}$ and the lowest-energy state localized in a non-global minimum $E_{13}$. All methods use the global cutoff scheme, and $g_{\text{max}}$ records how many global excitations were kept. The row labeled Exact is the exact result obtained via exact diagonalization. The optimization schemes that can be employed are squeezing and harmonic length optimization (see main text for details). A uses neither, B uses squeezing, C uses harmonic length optimization, D uses squeezing and optimizes the harmonic length in all minima, and E uses squeezing but only optimizes the harmonic lengths in the global minimum (and uses those lengths in the non-global minima).}
+\end{table*}
+
+\iffalse
+This allows us to immediately write down the inverse Bogoliubov transformation
+\begin{align}
+\left(\begin{matrix}a \\ a^{\dagger} \end{matrix} \right)
+=\left(\begin{matrix}u^{T} & -v^{T} \\ -v^{T} & u^{T} \end{matrix} \right)
+\left(\begin{matrix}c \\ c^{\dagger} \end{matrix}\right).
+\end{align}
+\fi
+We see by comparing the two forms of $\mathcal{H}_{\text{local}}'$ that the following relation must hold:
+\begin{align}
+\left(\begin{matrix}\zeta & \eta \\ \eta & \zeta \end{matrix} \right)=M^{T}
+\left(\begin{matrix}\Omega' & \mathbb{0} \\ \mathbb{0} & \Omega' \end{matrix} \right)M.
+\end{align}
+Multiplying on the right by $KM^{T}$ yields
+\begin{align}
+\label{eq:2neigenequation}
+\left(\begin{matrix}\zeta & -\eta \\ \eta & -\zeta \end{matrix} \right)M^{T}=M^{T}
+\left(\begin{matrix}\Omega' & \mathbb{0} \\ \mathbb{0} & -\Omega' \end{matrix} \right).
+\end{align}
+The above equation represents in fact $2N$ eigenvalue equations for the matrix on the left-hand side. At first glance it seems that $M^{T}$ should appear on the right of the diagonal matrix on the right-hand side for this to be interpreted as an eigenvalue problem. However, we can see that each of the $2N$ equations is of the form
+\begin{align}
+\left(\begin{matrix}\zeta & -\eta \\ \eta & -\zeta \end{matrix} \right)\left(\begin{matrix}u_{i}^{T} \\ v_{i}^{T} \end{matrix} \right)=
+\left(\begin{matrix}\zeta & -\eta \\ \eta & -\zeta \end{matrix} \right)\vec{x}_{i}=\omega_{i}'\vec{x}_{i},
+\end{align}
+where $u_{i}^{T}$ and $v_{i}^{T}$ are the $i^{\text{th}}$ columns of $u^{T}$ and $v^{T}$ respectively and $\omega_i'$ is the $i^{\text{th}}$ diagonal element of $\Omega'$. Furthermore, it can be easily verified that if $\omega_{i}'$ is an eigenvalue with eigenvector $\vec{x}_i$, then $-\omega_{i}'$ must also be an eigenvalue, with $u_{i}^{T}$ and $v_{i}^{T}$ swapped in the corresponding eigenvector. That is
+\begin{align}
+\left(\begin{matrix}\zeta & -\eta \\ \eta & -\zeta \end{matrix} \right)\left(\begin{matrix}v_{i}^{T} \\ u_{i}^{T} \end{matrix} \right)=-\omega_{i}'\left(\begin{matrix}v_{i}^{T} \\ u_{i}^{T} \end{matrix} \right). 
+\end{align}
+This existence of plus and minus eigenvalue pairs with corresponding eigenvectors is the origin of the structure of Eq.~\eqref{eq:2neigenequation} and was noted in Ref.~\cite{Javanainen}.
+
+Having numerically found $u$ and $v$, we can now immediately construct the squeezing operator $U$ discussed in Refs.~\cite{Wade, qin2001}. It is the operator that maps eigenstates of the Hamiltonian $\mathcal{H}_{\text{local}}=\omega_{\mu}(a_{\mu}^{\dagger}a_{\mu}+\frac{1}{2})$ to eigenstates of Eq.~\eqref{eq:offdiagHlocal}. It is given by ~\cite{Wade}
+\begin{align}
+U=&\exp(-\frac{1}{2}\Tr{\sigma})
+\exp(-\frac{1}{2}\rho_{mn}a_{m}^{\dagger}a_{n}^{\dagger}) \\ \nonumber 
+\times&\exp(-\sigma_{pq}a_{p}^{\dagger}a_{q})
+\exp(\frac{1}{2}\tau_{rs}a_{r}a_{s}), 
+\end{align}
+where $\rho=u^{-1}v, \sigma=\ln u$ and $\tau=vu^{-1}$. As long as care is taken to normal order the exponential involving $\sigma$, $U$ is normal ordered. However, we will need to commute individual terms of the $U$ operator around in order to achieve full normal ordering of the Hamiltonian. In addition to normal ordering relations of exponentials derived above, we require normal-ordering formulas for commuting squeezing operators in the definition of $U$ past eachother, as well as formulas for commuting translation operators past squeezing operators. We find
+\begin{align}
+\label{eq:danny_1}
+\exp(xaa)\exp(ya^{\dagger})=&\exp(y^2x)\exp(ya^{\dagger})\\ \nonumber &\times\exp(xaa)\exp(2yxa), \\
+\label{eq:witschel_1}
+\exp(xaa)\exp(ya^{\dagger}a^{\dagger})=&\frac{1}{\sqrt{1-4xy}}\\ \nonumber &\times\exp(ya^{\dagger}a^{\dagger}/(1-4xy))\\ \nonumber &\times\exp(-\ln(1-4xy)a^{\dagger}a)\\ \nonumber &
+\times\exp(xaa/(1-4xy)), \\
+\label{eq:wilcox10_20_1}
+\exp(xa^{\dagger}a)\exp(ya^{\dagger})=&\exp(ye^xa^{\dagger})\\ \nonumber &\times\exp(xa^{\dagger}a), \\
+\label{eq:wilcox10_20_2}
+\exp(xa^{\dagger}a)\exp(ya^{\dagger}a^{\dagger})=&\exp(ye^{2x}a^{\dagger}a^{\dagger})\\ \nonumber &\times\exp(xa^{\dagger}a).
+\end{align}
+Any other product can be obtained from the above products by taking the Hermitian conjugate.
+Deriving expressions for normal-ordering products such as the above is challenging due to the presence of multiple creation and annihilation operators in the argument of one or both exponentials. The explicit formulas given above for the normal ordering of Eqs.~\eqref{eq:wilcox10_20_1}-\eqref{eq:wilcox10_20_2} are derived in Eq. (10.21) of Ref.~\cite{Wilcox}. The explicit formula for the normal ordering of Eq.~\eqref{eq:witschel_1} is given in Eq. (3.37) of Ref.~\cite{Witschel}. We were unable to find an explicit expression for the normal ordering of Eq.~\eqref{eq:danny_1} in the literature, however the techniques used in Ref.~\cite{Wilcox} to derive the normal ordering of Eqs.~\eqref{eq:wilcox10_20_1}-\eqref{eq:wilcox10_20_2} generalize immediately to the normal ordering of Eq.~\eqref{eq:danny_1}.
+
+Of course, these single mode expressions must be generalized to the multi-mode case, which we treat here. These are
+\begin{widetext}
+\begin{align}
+\label{eq:danny_1_multi}
+\exp(a_{i}x_{ij}a_{j})\exp(y_{i}a_{i}^{\dagger})=&\exp(y_{i}x_{ij}y_{j})\exp(y_{i}a_{i}^{\dagger})
+\exp(a_{i}x_{ij}a_{j})
+\exp(y_{i}x_{ij}a_{j}+a_{i}x_{ij}y_{j}), \\
+\label{eq:witschel_1_multi}
+\exp(a_{i}x_{ij}a_{j})\exp(a_{i}^{\dagger}y_{ij}a_{j}^{\dagger})=
+&\frac{1}{\sqrt{\det{\mathbb{1}-4xy}}} \exp(a_{i}^{\dagger}[(\mathbb{1}-4yx)^{-1}y]_{ij}a_{j}^{\dagger})\\ \nonumber &\times\exp(-a_{i}^{\dagger}[\ln(\mathbb{1}-4yx)]_{ij}a_{j})
+\times\exp(a_{i}[(\mathbb{1}-4xy)^{-1}x]_{ij}a_{j}), \\
+\label{eq:wilcox10_20_1_multi}
+\exp(a_{i}^{\dagger}x_{ij}a_{j})\exp(y_{i}a_{i}^{\dagger})=
+&\exp(a_{i}^{\dagger}(e^{x})_{ij}y_{j}) 
+\exp(a_{i}^{\dagger}x_{ij}a_{j}), \\
+\label{eq:wilcox10_20_2_multi}
+\exp(a_{i}^{\dagger}x_{ij}a_{j})\exp(a_{i}^{\dagger}y_{ij}a_{j}^{\dagger})=
+&\exp(a_{i}^{\dagger}(e^{x})_{ij}y_{jk}(e^{x^{T}})_{k\ell}a_{\ell}^{\dagger}) \exp(a_{i}^{\dagger}x_{ij}a_{j}), \\ 
+\label{eq:danny_adag_a}
+\exp(a_{i}^{\dagger}x_{ij}a_{j})\exp(a_{i}^{\dagger}y_{ij}a_{j}) = &\exp(a_{i}^{\dagger}\ln(e^xe^y)_{ij}a_{j}).
+\end{align}
+Eq.~\eqref{eq:witschel_1_multi} is given in Ref.~\cite{Hongyi} and requires non-singular $\mathbb{1}-4xy$ and $\mathbb{1}-4yx$. The derivation makes use of the integration within an ordered product technique (IWOP), which we have found to be quite useful and allows for the derivation of the other formulas given above. 
+\iffalse
+A formula that will be necessary for commuting squeezing and translation operators past each other is a combination of two of the above formulas
+\begin{align}
+\label{eq:danny_multi_combo}
+\exp(w_{i}a_{i}+a_{i}x_{ij}a_{j})\exp(v_{i}a_{i}^{\dagger}+a_{i}^{\dagger}y_{ij}a_{j}^{\dagger})=& \frac{\exp(\gamma)}{\sqrt{\det{\mathbb{1}-4xy}}}\exp(a_{i}^{\dagger}[(\mathbb{1}-4yx)^{-1}y]_{ij}a_{j}^{\dagger})\exp(\alpha_{k}a_{k}^{\dagger})\\ \nonumber &\exp(-a_{i}^{\dagger}[\ln(\mathbb{1}-4yx)]_{ij}a_{j})\exp(\beta_{k}a_{k})\exp(a_{i}[(\mathbb{1}-4xy)^{-1}x]_{ij}a_{j}),
+\end{align}
+where
+\begin{align}
+\label{eq:gamma_alpha_beta_def}
+\gamma =& w_{i}(\mathbb{1}-4yx)_{ij}^{-1}v_{j}+w_{i}(\mathbb{1}-4yx)_{ij}^{-1}y_{jk}w_{k}+v_{i}(\mathbb{1}-4xy)_{ij}^{-1}x_{jk}v_{k}, \\ \nonumber 
+\alpha_{k} =& w_{i}y_{ij}^{T}(\mathbb{1}-4xy)_{jk}^{-1}+w_{i}(\mathbb{1}-4yx)_{ij}^{-1}y_{jk}+v_{i}(\mathbb{1}-4xy)_{ik}^{-1}, \\ \nonumber
+\beta_{k} =& v_{i}x_{ij}^{T}(\mathbb{1}-4yx)^{-1}_{jk}+v_{i}(\mathbb{1}-4xy)^{-1}_{ij}x_{jk}+w_{i}(\mathbb{1}-4yx)^{-1}_{ik}.
+\end{align}
+\fi 
+Finally, the formula that allows for the normal ordering of $\exp(a_{i}^{\dagger}x_{ij}a_{j})$ is ~\cite{Mehta}
+%We will derive below Eq.~\eqref{eq:danny_1_multi} and show how the derivation generalizes to Eqs.~\eqref{eq:wilcox10_20_1_multi}-\eqref{eq:wilcox10_20_2_multi}. 
+%We also require a formula such as Eq.~\eqref{eq:danny_adag_a}, which is not as trivial as the single-mode case. Finally
+\begin{align}
+\label{eq:norm_adag_a}
+\exp(a_{i}^{\dagger}x_{ij}a_{j})=:\exp(a_{i}^{\dagger}(e^x-\mathbb{1})_{ij}a_{j}):,
+\end{align}
+where we have introduced the standard notation $:\,:$ to indicate normal ordering, without making use of the commutation relations. A trivial example of the use of this superoperator is $:aa^{\dagger}:=a^{\dagger}a$.
+
+\iffalse
+The procedure to derive Eq.~\eqref{eq:danny_1_multi} is as follows. Following the notation of Ref.~\cite{Wilcox}, we introduce the normal-ordering function $\mathcal{N}$ which commutes operators past eachother without taking into account the commutation relations. So, we desire an expression of the form
+\begin{align}
+\label{eq:multimodenormal}
+e^{x_{ij}a_{i}a_{j}}e^{y_{l}a_{l}^{\dagger}}=\mathcal{N}\left[\exp(f_{km}a_{k}a_{m}+g_{k}a_{k}^{\dagger}+h_{k}a_{k}+s)\right].
+\end{align}
+The trick now is to take a derivative with respect to $x_{ij}$. Taking into account that this derivative commutes with the normal-ordering function, and inserting Eq.~\eqref{eq:multimodenormal} into the result, we find
+\begin{align}
+a_{i}a_{j}e^{x_{ij}a_{i}a_{j}}e^{y_{l}a_{l}^{\dagger}}&=g_{k}'a_{k}^{\dagger}e^{x_{ij}a_{i}a_{j}}e^{y_{l}a_{l}^{\dagger}}
++s'e^{x_{ij}a_{i}a_{j}}e^{y_{l}a_{l}^{\dagger}}
+\\ \nonumber  
+&+ e^{x_{ij}a_{i}a_{j}}e^{y_{l}a_{l}^{\dagger}}(f_{km}'a_{k}a_{m}+h_{k}'a_{k}),
+\end{align}
+where primes indicate derivatives of the coefficients with respect to $x_{ij}$. Now, we will multiply this equation on the right by $e^{-y_{l}a_{l}^{\dagger}}e^{-x_{ij}a_{i}a_{j}}$.
+Using the well-known formula
+\begin{align}
+e^{A}Be^{-A}=B+[A, B]+\frac{1}{2!}[A,[A,B]]+\cdots,
+\end{align}
+we find 
+\begin{align}
+a_{i}a_{j}&=g_{k}'a_{k}^{\dagger}+s'\\ \nonumber &+f_{km}'(a_{k}a_{m}-a_{k}y_{m}-y_{k}a_{m}+y_{k}y_{m})\\ \nonumber &+h_{k}'(a_{k}-y_{k}),
+\end{align}
+where a sum over $k, m$ is implied. Now, we must match coefficients on each side of the equation. We see that $f_{km}'=0$ unless $k=i, m=j$. So we have $f_{ij}'=\delta_{ij}$. Additionally we have that the coefficient of $a_{k}^{\dagger}$ must vanish everywhere, $g_{k}'=0 \; \forall \; k$. The coefficient of $a_{k}$ will allow us to determine $h_{k}'$. We find $h_{k}'-2f_{km}'y_{m}=0 \; \forall \; k$. This implies that $h_{k}'$ vanishes for all $k$, except $k=i$ or $k=j$. In those cases, we find $h_{i}'=y_{j}$, $h_{i}'=y_{j}$. Performing a similar calculation for $s'$, we find $s'=y_{i}y_{j}$. These steps can be followed for every element $x_{ij}$ of the matrix $x$. Now taking into account the initial condition wherein $x=\mathbb{0},$ we see $f_{ij}(\mathbb{0})=h_{i}(\mathbb{0})=s(\mathbb{0})=0$ and $g_{i}(\mathbb{0})=y_{i}$. This allows us to perform the integrals and find $f_{ij}=x_{ij}, h_{i}=y_{j}x_{ji}+x_{ij}y_{j}, g_{i}=y_{i}$ and $s=y_{i}x_{ij}y_{j}$. Plugging these coefficients into Eq.~\eqref{eq:multimodenormal} immediately yields Eq.~\eqref{eq:danny_1_multi}. Following the exact same formalism as above, one can find the formulas shown in Eqs.~\eqref{eq:wilcox10_20_1_multi}-\eqref{eq:wilcox10_20_2_multi}.
+\fi
+
+We will go through the derivation of Eq.~\eqref{eq:danny_1_multi} to illustrate the IWOP procedure. Eqs.~\eqref{eq:wilcox10_20_1_multi}-\eqref{eq:danny_adag_a} can all be similarly derived using the IWOP technique. 
+
+We begin by stating some results from Ref.~\cite{Hongyi}, familiar to those who have studied coherent states. The normalized coherent state $\ket{z_{i}}$, which is an eigenstate of the annihilation operator $a_{i}$, is given by $\ket{z_{i}}=\exp(z_{i}a_{i}^{\dagger}-z_{i}^*a_{i})\ket{0}$, where $a_{i}\ket{z_{i}}=z_{i}\ket{z_{i}}$. We will make use of the overcompleteness relation
+\begin{align}
+\int\frac{d^2z_{i}}{\pi}\ket{z_{i}}\bra{z_{i}}=\int\frac{d^2z_{i}}{\pi}:\exp(-z_{i}^{*}z_{i}+z_{i}a_{i}^{\dagger}+z_{i}^{*}a_{i}-a_{i}^{\dagger}a_{i}):=1,
+\end{align}
+where $\int d^2 z_{i}\equiv \int_{-\infty}^{\infty}d[\Re(z_{i})]\int_{-\infty}^{\infty}d[\Im(z_{i})]$ and the identity $\ket{0}\bra{0}=:\exp(-a_{i}^{\dagger}a_{i}):$ was used. Finally, we will make use of the Gaussian integral formula 
+\begin{align}
+\label{Iformula}
+I\equiv \int \prod_{i}^{N}\left[\frac{d^2 z_{i}}{\pi}\right]\exp\left[-\frac{1}{2}
+\left(\begin{matrix}z & z^* \end{matrix}\right)
+\left(\begin{matrix}A & B \\ C & D \end{matrix}\right)
+\left(\begin{matrix}z \\ z^{*}\end{matrix}\right)
++ \left(\begin{matrix}\mu & \nu^* \end{matrix}\right)
+\left(\begin{matrix}z \\ z^{*}\end{matrix}\right)
+\right] \\ \nonumber
+= \left[\det\left(\begin{matrix}C & D \\ A & B \end{matrix}\right) \right]^{-1/2}\exp\left[\frac{1}{2}
+\left(\begin{matrix}\mu & \nu^* \end{matrix}\right)
+\left(\begin{matrix}A & B \\ C & D \end{matrix}\right)^{-1}
+\left(\begin{matrix}\mu \\ \nu^{*}\end{matrix}\right)\right],
+\end{align}
+where $N$ is the number of modes, $A, B, C, D$ are $N\times N$ matrices, $\mu, \nu^{*}$ are $1\times N$ vectors and $\left(\begin{matrix}z & z^* \end{matrix}\right)=\left(\begin{matrix}z_{1} & \cdots & z_{N} & z_{1}^{*} & \cdots & z_{N}^{*}\end{matrix}\right)$. Eq.~\eqref{Iformula} is given in Ref.~\cite{Berezin} and quoted in Ref.~\cite{Hongyi}, whose notation we are borrowing. We will now use these formulas and the IWOP technique to derive Eq.~\eqref{eq:danny_1_multi}. We find
+\begin{align}
+\exp(a_{i}x_{ij}a_{j})\exp(y_{i}a_{i}^{\dagger}) =& \int 
+\prod_{i}^{N}\left[\frac{d^2 z_{i}}{\pi}\right]
+\exp(a_{i}x_{ij}a_{j})\ket{z_{1}\cdots z_{N}}\bra{z_{1}\cdots z_{N}}\exp(y_{i}a_{i}^{\dagger}) \\ \nonumber
+=&\int  \prod_{i}^{N}\left[\frac{d^2 z_{i}}{\pi}\right]
+:\exp(-z_{i}^{*}z_{i}+a_{i}^{\dagger}z_{i}+a_{i}z_{i}^{*}-a_{i}^{\dagger}a_{i}+z_{i}x_{ij}z_{j}+y_{i}z_{i}^{*}): \\ \nonumber
+=& \int  \prod_{i}^{N}\left[\frac{d^2 z_{i}}{\pi}\right]
+:\exp\left[-\frac{1}{2}
+\left(\begin{matrix}z & z^* \end{matrix}\right)
+\left(\begin{matrix}-2x & \mathbb{1} \\ \mathbb{1} & \mathbb{0} \end{matrix}\right)
+\left(\begin{matrix}z \\ z^{*}\end{matrix}\right)
++ \left(\begin{matrix}a^{\dagger} & a+y \end{matrix}\right)
+\left(\begin{matrix}z \\ z^{*}\end{matrix}\right)
+-a_{i}^{\dagger}a_{i}\right]: \\ \nonumber 
+=& :\exp\left[\frac{1}{2}
+\left(\begin{matrix}a^{\dagger} & a+y \end{matrix}\right)
+\left(\begin{matrix}\mathbb{0} & \mathbb{1} \\ \mathbb{1} & 2x \end{matrix}\right)
+\left(\begin{matrix}a^{\dagger} \\ a+y\end{matrix}\right)
+-a_{i}^{\dagger}a_{i}\right]: \\ \nonumber
+=&\exp(y_{i}x_{ij}y_{j})\exp(y_{i}a_{i}^{\dagger})
+\exp(a_{i}x_{ij}a_{j})
+\exp(y_{i}x_{ij}a_{j}+a_{i}x_{ij}y_{j}).
+\end{align}
+Eqs.~\eqref{eq:wilcox10_20_1_multi}-\eqref{eq:danny_adag_a} can be derived using the same IWOP technique, illustrating the power and generality of the results from Ref.~\cite{Hongyi}.
+
+We would now like to use the commutation relations Eqs.~\eqref{eq:danny_1_multi}-\eqref{eq:danny_adag_a} to normal order the Hamiltonian, with the squeezing operators present. We will consider a general expression that can be applied to both the kinetic and potential terms of the Hamiltonian
+\begin{align}
+T^{\dagger}S^{\dagger}R^{\dagger}\exp(x_{i}a_{i}^{\dagger})(-z_{x\mu}a_{\mu}+z_{x\mu}a_{\mu}^{\dagger})\exp(y_{i}a_{i})R'S'T' &= \exp(\frac{1}{2}\tau_{ij}a_{i}^{\dagger}a_{j}^{\dagger})
+\exp(-\sigma_{ij}^{T}a_{i}^{\dagger}a_{j})  \exp(-\frac{1}{2}\rho_{ij}a_{i}a_{j})
+\\ \nonumber &\times
+\exp(x_{i}a_{i}^{\dagger})(-z_{x\mu}a_{\mu}+z_{x\mu}a_{\mu}^{\dagger})\exp(y_{i}a_{i})\\ \nonumber &\times \exp(-\frac{1}{2}\rho_{ij}'a_{i}^{\dagger}a_{j}^{\dagger})
+\exp(-\sigma_{ij}'a_{i}^{\dagger}a_{j})
+\exp(\frac{1}{2}\tau_{ij}'a_{i}a_{j}).
+\end{align}
+We note that $\tau, \tau', \rho, \rho'$ are all symmetric. An example of a term in the Hamiltonian that appears in this form is a kinetic term, with $z_{x\mu}=\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}, x_{i} = \frac{1}{\sqrt{2}}(\delta\vec{\phi}_{\vec{k}pm})_{j}\Xi_{ji}^{-T}, y_{i}=-\frac{1}{\sqrt{2}}(\delta\vec{\phi}_{\vec{k}pm})_{j}\Xi_{ji}^{-T}$. For the potential, we can ignore the middle terms and instead have $x_{i}=\frac{1}{\sqrt{2}}(\delta\vec{\phi}_{\vec{k}pm})_{j}\Xi_{ji}^{-T}+\frac{i}{\sqrt{2}}\Xi_{ji}, y_{i}=-\frac{1}{\sqrt{2}}(\delta\vec{\phi}_{\vec{k}pm})_{j}\Xi_{ji}^{-T}+\frac{i}{\sqrt{2}}\Xi_{ji}$. Our first step in the normal ordering procedure is to commute $R'$ to the left. We find
+\begin{align}
+(-z_{\mu}a_{\mu}+z_{\mu}a_{\mu}^{\dagger})\exp(y_{i}a_{i}) \exp(-\frac{1}{2}\rho_{ij}'a_{i}^{\dagger}a_{j}^{\dagger})
+=&
+\exp(-\frac{1}{2}y_{i}\rho_{ij}'y_{j})
+\exp(-\frac{1}{2}\rho_{ij}'a_{i}^{\dagger}a_{j}^{\dagger})
+\exp(-y_{k}\rho_{ki}'a_{i}^{\dagger}) \\ \nonumber \times&
+(-z_{\mu}[a_{\mu}-\rho_{\mu j}'a_{j}^{\dagger}-\rho_{\mu j}'y_{j}]+z_{\mu}a_{\mu}^{\dagger})
+\exp(y_{i}a_{i}),
+\end{align}
+where Eq.~\eqref{eq:danny_1_multi} and Eq.~\eqref{eq:wilcox10_20_1_multi} were used, along with the well-known identity \cite{Wilcox}
+\begin{align}
+e^{A}B = (B+[A,B]+\frac{1}{2!}[A, [A, B]]+\cdots)e^{A}.
+\end{align}
+This identity is useful because in all cases considered here, there are only two terms in the expansion, either because $[A,B]$ is a c-number or because $[A, B]$ commutes with $A$. For example, $R'$ commutes past $a_{\mu}^{\dagger}$, but sends $a_{\mu}\rightarrow a_{\mu}-\rho_{\mu j}'a_{j}^{\dagger}$.
+\iffalse
+\begin{align}
+n_{x}R' &= \frac{-i}{\sqrt{2}}\Xi_{x\mu}^{-T}(a_{\mu} - a_{\mu}^{\dagger})\exp(-\frac{1}{2}\rho_{ij}'a_{i}^{\dagger}a_{j}^{\dagger}) \\ \nonumber 
+&= \frac{-i}{\sqrt{2}}\exp(-\frac{1}{2}\rho_{ij}'a_{i}^{\dagger}a_{j}^{\dagger})\Xi_{x\mu}^{-T}(a_{\mu}-\rho_{\mu j}'a_{j}^{\dagger}-a_{\mu}^{\dagger}) \\ \nonumber
+&= R'(n_{x}+\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}\rho_{\mu j}'a_{j}^{\dagger}),
+\end{align}
+Since $R'$ commutes past $a_{\mu}^{\dagger}$, but sends $a_{\mu}\rightarrow a_{\mu}-\rho_{\mu j}'a_{j}^{\dagger}$. We now have 
+\begin{align}
+T^{\dagger}S^{\dagger}R^{\dagger}n_{x}R'S'T' =
+T^{\dagger}S^{\dagger}R^{\dagger}R'(n_{x}+\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}\rho_{\mu j}'a_{j}^{\dagger})S'T'.
+\end{align}
+\fi
+
+Now, we need to commute $R^{\dagger}$ and $R'$ past eachother. This can be done immediately via Eq.~\eqref{eq:witschel_1_multi}, provided that $\rho'$ and $\rho$ are such that $\mathbb{1}-\rho'\rho$ and $\mathbb{1}-\rho\rho'$ are nonsingular. We find
+\begin{align}
+R^{\dagger}R'&=\exp(-\frac{1}{2}\rho_{ij}a_{i}a_{j})\exp(-\frac{1}{2}\rho_{ij}'a_{i}^{\dagger}a_{j}^{\dagger}) \\ \nonumber &=\frac{1}{\sqrt{\det(\mathbb{1}-\rho\rho')}}
+\exp(-\frac{1}{2}\delta\rho'_{ij}a_{i}^{\dagger}a_{j}^{\dagger})
+\exp(\overline{\delta\rho}_{ij}a_{i}^{\dagger}a_{j})
+\exp(-\frac{1}{2}\delta\rho_{ij}a_{i}a_{j}),
+\end{align}
+where we have defined $\delta\rho'=(\mathbb{1}-\rho'\rho)^{-1}\rho'$, $\overline{\delta\rho}=\ln(\mathbb{1}-\rho'\rho)^{-1}$, and $\delta\rho=(\mathbb{1}-\rho\rho')^{-1}\rho$. The next step is to commute $\exp(-\frac{1}{2}\delta\rho_{ij}a_{i}a_{j})$ to the right. We find, noting that there is no a priori reason to expect that $\delta\rho$ should be symmetric
+\begin{align}
+T^{\dagger}S^{\dagger}R^{\dagger}\exp(x_{i}a_{i}^{\dagger})(-z_{\mu}a_{\mu}+z_{\mu}a_{\mu}^{\dagger})\exp(y_{i}a_{i})R'S'T' &= \alpha
+T^{\dagger}S^{\dagger}
+\exp(-\frac{1}{2}\delta\rho'_{ij}a_{i}^{\dagger}a_{j}^{\dagger})
+\exp(\overline{\delta\rho}_{ij}a_{i}^{\dagger}a_{j})
+\exp((x_{i}-y_{k}\rho_{ki}')a_{i}^{\dagger})
+\\ \nonumber &\times
+\left(-z_{\mu}'a_{\mu}+z_{\mu}''a_{\mu}^{\dagger}+\epsilon\right)
+\exp(\left(y_{i}-\delta\rho_{i}''\right)a_{i})
+\exp(-\frac{1}{2}\delta\rho_{ij}a_{i}a_{j})
+S'T',
+\end{align}
+where
+\begin{align}
+\alpha =& \frac{\exp(-\frac{1}{2}\left(y_{i}\rho_{ij}'y_{j}+(x_{i}-y_{k}\rho_{ki}')\delta\rho_{ij}(x_{j}-\rho_{j\ell}'y_{\ell})\right))}{\sqrt{\det(\mathbb{1}-\rho\rho')}}, \\ \nonumber 
+z_{\mu}' =& z_{j}\left(\delta_{j\mu}+\frac{1}{2}\rho_{jk}'\delta\rho_{k\mu}+\frac{1}{2}\rho_{jk}'\delta\rho_{k\mu}^{T}+\frac{1}{2}\delta\rho_{j\mu}+\frac{1}{2}\delta\rho_{j\mu}^{T}\right), \\ \nonumber 
+z_{\mu}'' =& z_{j}\left(\delta_{j\mu}+\rho_{j\mu}' \right), \\ \nonumber
+\epsilon =& -z_{\mu}\left(\rho_{\mu j}'\delta\rho_{j}''- \rho_{\mu j}'y_{j}+\delta\rho_{\mu}''\right) \\ \nonumber 
+\delta\rho_{i}'' =& \frac{1}{2}(x_{j}-y_{k}\rho'_{kj})(\delta\rho_{ji}+\delta\rho_{ji}^{T}).
+\end{align}
+
+
+\iffalse
+\begin{align}
+\exp(-\frac{1}{2}\delta\rho_{ij}a_{i}a_{j})a_{\mu}^{\dagger}=&(a_{\mu}^{\dagger}-\frac{1}{2}\delta\rho_{\mu j}a_{j}-\frac{1}{2}a_{j}\delta\rho_{j\mu})\\ \nonumber \times &\exp(-\frac{1}{2}\delta\rho_{ij}a_{i}a_{j}).
+\end{align}
+Therefore, defining $\delta^2\rho=\frac{1}{2}(\delta\rho+\delta\rho^{T}+\rho'\delta\rho+\rho'\delta\rho^{T})$, we find after commuting the exponential involving $\delta\rho$ to the right
+\begin{align}
+T^{\dagger}S^{\dagger}R^{\dagger}n_{x}R'S'T' =& \frac{1}{\sqrt{\det(\mathbb{1}-\rho\rho')}}
+T^{\dagger}S^{\dagger} \\ \nonumber \times&
+\exp(-\frac{1}{2}\delta\rho'_{ij}a_{i}^{\dagger}a_{j}^{\dagger})  
+\exp(\overline{\delta\rho}_{ij}a_{i}^{\dagger}a_{j})\\ \nonumber \times& 
+\left(n_{x}-\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}\delta^2\rho_{\mu j}a_{j}+\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}\rho_{\mu j}'a_{j}^{\dagger}\right) \\ \nonumber \times &
+\exp(-\frac{1}{2}\delta\rho_{ij}a_{i}a_{j})S'T'.
+\end{align}
+\fi
+There are two final steps to be performed. The first is that $S'$ and $S^{\dagger}$ must be commuted towards the center of the expression. The final step is to then insert those exponentials properly in the middle term so that normal ordering is achieved. These steps can be achieved via Eq.~\eqref{eq:wilcox10_20_2_multi}, as well as the identities $a_{\mu}\exp(-x_{ij}a_{i}^{\dagger}a_{j})=\exp(-x_{ij}a_{i}^{\dagger}a_{j})(e^{-x})_{\mu l}a_{l}$ and $\exp(-x_{ij}a_{i}^{\dagger}a_{j})a_{\mu}^{\dagger}=a_{l}^{\dagger}(e^{-x})_{l\mu}\exp(-x_{ij}a_{i}^{\dagger}a_{j})$. Collecting terms, we find
+\begin{align}
+\label{eq:norm_ord_kinetic}
+T^{\dagger}S^{\dagger}R^{\dagger}\exp(x_{i}a_{i}^{\dagger})(-z_{\mu}a_{\mu}+z_{\mu}a_{\mu}^{\dagger})\exp(y_{i}a_{i})R'S'T' =
+\alpha
+\exp(a_{i}^{\dagger}\left(\frac{1}{2}\tau_{il}-\frac{1}{2}(e^{-\sigma^{T}})_{ij}\delta\rho'_{jk}(e^{-\sigma})_{k\ell}\right)a_{\ell}^{\dagger})
+ \\ \nonumber 
+ \exp((x_{k}-y_{\ell}\rho'_{\ell k})(e^{\overline{\delta\rho}})_{kj}^{T}(e^{-\sigma})_{ji}a_{i}^{\dagger})
+ \Bigg(-S''z_{\mu}'(e^{-\sigma'})_{\mu m}a_{m}
+ +
+ z_{\mu}''(e^{\overline{\delta\rho}})_{\mu\ell}^{T}(e^{-\sigma^{T}})_{\ell m}^{T}a_{m}^{\dagger}S''+\epsilon S''\Bigg)
+ \\ \nonumber 
+ \exp((y_{i}-\delta\rho_{i}'')(e^{-\sigma'})_{ij}a_{j})
+\exp(a_{i}\left(\frac{1}{2}\tau_{il}'-\frac{1}{2}(e^{-{\sigma'}^{T}})_{ij}\delta\rho_{jk}(e^{-\sigma'})_{k\ell}\right)a_{\ell}).
+\end{align}
+We have defined
+\begin{align}
+S'' = \exp(a_{i}^{\dagger}\ln(e^{-\sigma^{T}}e^{\overline{\delta\rho}}e^{-\sigma'})_{ij}a_{j})
+= :\exp(a_{i}^{\dagger}\left(e^{-\sigma^{T}}e^{\overline{\delta\rho}}e^{-\sigma'}-\mathbb{1}\right)_{ij}a_{j}):,
+\end{align}
+making use of Eqs.~\eqref{eq:danny_adag_a}-\eqref{eq:norm_adag_a} to find a fully normal-ordered expression. 
+
+\iffalse
+The terms bracketing the inner kinetic term can be properly normal ordered using the identities above. We find that
+\begin{align}
+\label{eq:norm_ord_kin_help}
+\exp(-a_{i}^{\dagger}\sigma_{ij}^{T}a_{j})\exp(a_{i}^{\dagger}\overline{\delta\rho}_{ij}a_{j}) 
+\left(n_{x}-\frac{i}{2\sqrt{2}}\Xi_{x\mu}^{-T}\delta^2\rho_{\mu j}a_{j}+\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}\rho_{\mu j}'a_{j}^{\dagger}\right) 
+\exp(-a_{i}^{\dagger}\sigma_{ij}'a_{j}) = \\ \nonumber
+-\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}\exp(a_{i}^{\dagger}\ln(e^{-\sigma^{T}}e^{\overline{\delta\rho}}e^{-\sigma'})_{ij}a_{j})\left(\delta_{\mu j}+\delta^2\rho_{\mu j}\right)(e^{-\sigma'})_{j \ell}a_{\ell}
+\\ \nonumber
++\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}\left(\delta_{\mu j} +\rho_{\mu j}'\right)(e^{\overline{\delta\rho}})_{j\ell}^{T}(e^{-\sigma})_{\ell m}a_{m}^{\dagger}
+\exp(a_{i}^{\dagger}\ln(e^{-\sigma^{T}}e^{\overline{\delta\rho}}e^{-\sigma'})_{ij}a_{j}).
+\end{align}
+Inserting Eq.~\eqref{eq:norm_ord_kin_help} into Eq.~\eqref{eq:norm_ord_kinetic} will yield a fully normal-ordered expression.
+
+We would now like to perform the same calculation, but for the potential terms that appear in our Hamiltonian. The relevant expression to normal order is $T^{\dagger}S^{\dagger}R^{\dagger}e^{i\phi_{x}}R'S'T'$. Many of the steps here are the same as in the normal ordering of the kinetic term, however here we will make use of Eq.~\eqref{eq:danny_1_multi}. Omitting the intermediate steps, we arrive at the result
+\begin{align}
+T^{\dagger}S^{\dagger}R^{\dagger}e^{i\phi_{x}}R'S'T' =& \frac{\exp(\frac{1}{4}\Xi_{x\mu}(\delta_{\mu i}-\rho_{\mu i}')[\delta\rho_{ij}(\delta_{j\nu}-\rho_{j\nu}')-\delta_{i\nu}]\Xi_{\nu x}^{T})}{\sqrt{\det(\mathbb{1}-\rho\rho')}} 
+\\ \nonumber \times&
+\exp(a_{i}^{\dagger}\left(\frac{1}{2}\tau_{il}-\frac{1}{2}(e^{-\sigma^{T}})_{ij}\delta\rho'_{jk}(e^{-\sigma})_{k\ell}\right)a_{\ell}^{\dagger})
+\exp(\frac{i}{\sqrt{2}}\Xi_{x\mu}(\delta_{\mu \nu}-\rho_{\mu\nu}')(e^{\overline{\delta\rho}})_{\nu j}^{T}(e^{-\sigma^{T}})_{j\ell}^{T}a_{\ell}^{\dagger})
+\\ \nonumber \times&
+\exp(a_{i}^{\dagger}\ln(e^{-\sigma^{T}}e^{\overline{\delta\rho}}e^{-\sigma'})_{ij}a_{j})
+\exp(\frac{i}{\sqrt{2}}\Xi_{x\mu}(\delta_{\mu \nu}-\delta_{e}^{2}\rho_{\mu\nu}')(e^{-\sigma'})_{\nu j}a_{j}) 
+\\ \nonumber \times&
+\exp(a_{i}\left(\frac{1}{2}\tau_{il}'-\frac{1}{2}(e^{-{\sigma'}^{T}})_{ij}\delta\rho_{jk}(e^{-\sigma'})_{k\ell}\right)a_{\ell}),
+\end{align}
+where $\delta_{e}^{2}\rho=\frac{1}{2}([\delta_{\mu i}-\rho_{\mu i}]\delta\rho_{ij}+[\delta_{\mu i}-\rho_{\mu i}]\delta\rho_{ij}^{T})$, and the expression  is fully normal ordered. One can check that if there is no squeezing, then $u=\mathbb{1},v=\mathbb{0}, \sigma=\sigma'=\tau=\tau'=\rho=\rho'=\mathbb{0}$ and we are left with $e^{i\phi_{x}}$.
+This is all well and good, but we must take into account both squeezing and translation. The relevant kinetic expression is therefore in fact
+\begin{align}
+T^{\dagger}S^{\dagger}R^{\dagger}V^{\dagger}_{\delta\phi}n_{x}V_{-\delta\phi}R'S'T' =& \frac{\exp(\gamma-\frac{1}{4}\delta\phi_{x}\Xi_{x\mu}^{-T}(\rho_{\mu\nu}+\rho_{\mu \nu}')\Xi_{\nu y}^{-1}\delta\phi_{y})}{\sqrt{\det(\mathbb{1}-\rho\rho')}}T^{\dagger}\exp(\frac{1}{\sqrt{2}}\delta\phi_{x}\Xi_{x\mu}^{-T}(e^{-\sigma})_{\mu\nu}a_{\nu}^{\dagger})\\ \nonumber 
+&\exp(-\sigma_{ij}a_{i}^{\dagger}a_{j}) 
+\exp(-\frac{1}{2}a_{i}^{\dagger}\delta\rho_{ij}'a_{j}^{\dagger})\exp(\alpha_{k}a_{k}^{\dagger})\exp(a_{i}^{\dagger}\overline{\delta\rho}_{ij}a_{j}) \\ \nonumber 
+&\left(n_{x}-\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}\delta^{2}\rho_{\mu j}a_{j}+\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}\rho_{\mu j}'a_{j}^{\dagger}+\frac{i}{\sqrt{2}}\Xi_{x\mu}^{-T}(\delta_{\mu j}+\rho_{\mu j})\beta_{j} \right) \\ \nonumber
+&\exp(\beta_{k}a_{k})\exp(-\frac{1}{2}\delta\rho_{ij}a_{i}a_{j})\exp(-\sigma_{ij}'a_{i}^{\dagger}a_{j})\exp(-\frac{1}{\sqrt{2}}\delta\phi_{x}\Xi_{x\mu}^{-T}(e^{-\sigma'})_{\mu\nu}a_{\nu})T',
+\end{align}
+where $\gamma, \alpha_{k}, \beta_{k}$ are as given in Eq.~\eqref{eq:gamma_alpha_beta_def}, with $x_{ij}=-\frac{1}{2}\rho_{ij}, y_{ij}=-\frac{1}{2}\rho_{ij}', w_{i}=-\frac{1}{\sqrt{2}}\delta\phi_{x}\Xi_{xj}^{-T}\rho_{ji}$ and $v_{i}=\frac{1}{\sqrt{2}}\delta\phi_{x}\Xi_{xj}^{-T}\rho_{ji}'$.
+This is an intermediate step, as this expression is not yet fully normal ordered.
+\fi
+\end{widetext}
+
+\begin{table*}
+ \begin{tabular}{|r|l|l|l|l|      |r|l|       |r|l|l|l|l|       |r|l|}
+ \hline
+   \multicolumn{7}{|c||}{$E_{0}$ [GHz]} & 
+   \multicolumn{7}{|c|}{$E_{1}$ [GHz]} \\
+   \hline
+ $\Sigma_{\text{max}}$ & IP & P & IPAC & PAC &    $n_{\text{cut}}$ & AD &    $\Sigma_{\text{max}}$ & IP & P & IPAC & PAC &    $n_{\text{cut}}$ & AD \\
+ \hline
+ 0 & 86.1952 & 83.3728 & 82.3706 & 82.4112 & 1 & 85.8517 & 0 & 91.4605 & 88.3023 & 84.4882 & 88.3023 & 1 & 87.9608 \\
+ 1 & 86.1952 & 83.3728 & 82.3706 & 82.4112 & 2 & 82.5268 & 1 & 87.5550 & 84.7940 & 83.4360 & 83.4739 & 2 & 84.1042 \\
+ 2 & 82.3282 & 82.0097 & 81.8357 & 81.8429 & 3 & 81.8103 & 2 & 85.5667 & 84.7815 & 83.4223 & 83.4578 & 3 & 82.9705 \\
+ 3 & 82.3087 & 81.7662 & 81.6953 & 81.6992 &   &         & 3 & 83.5501 & 83.1631 & 82.9323 & 82.9379 & &  \\
+ 4 & 81.7781 & 81.6592 & 81.6590 & 81.6604 &   &         & 4 & 83.5260 & 82.8773 & 82.7786 & 82.7545 & &  \\
+ 5 & 81.7639 &         & 81.6540 & 81.6544 &   &         & 5 & 82.9123 &         & 82.7312 & 82.7324 & &  \\
+ \hline 
+ \end{tabular}
+ \end{table*}
+ 
+ \begin{align}
+\label{eq:normal_kin}
+\mathcal{T}_{-\vec{\theta}}\,n_{j}\mathcal{T}_{\vec{\chi}} &= \mathcal{V}_{\vec{\chi}-\vec{\theta}}^{\dagger}\left(n_{j}-\frac{i}{2}(\Xi^{-t}\Xi^{-1}[\vec{\chi}-\vec{\theta}])_{j}\right)\mathcal{V}_{-(\vec{\chi}-\vec{\theta})}\\ \nonumber 
+&\times \exp(-\frac{1}{4}(\vec{\chi}-\vec{\theta})^{t}\Xi^{-t}\Xi^{-1}(\vec{\chi}-\vec{\theta})),
+\end{align}
+
+\bibliography{bib}
+
+\end{document}
